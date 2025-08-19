@@ -1,0 +1,95 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+<style>
+  .card {
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .main-container {
+      flex-direction: column;
+    }
+
+    .summary-section,
+    .product-graph-section {
+      flex: 1 1 100%;
+    }
+
+    .product-graph-section {
+      flex-direction: column !important;
+    }
+  }
+</style>
+
+<!-- Gabungkan Ringkasan + Top Produk + Grafik -->
+<div class="main-container" style="display: flex; flex-wrap: wrap; gap: 2rem; margin-bottom: 3rem;">
+
+  <!-- 📊 Ringkasan Penjualan & Refund -->
+  <div class="summary-section" style="flex: 1 1 350px; display: flex; flex-direction: column; gap: 1.5rem;">
+
+    <div class="card" style="background: #f0f9ff;">
+      <div style="font-size: 18px; color: #555; margin-bottom: 0.5rem;">
+        <i class="fas fa-calendar-day"></i> FA'AN OHIN LORON
+      </div>
+      <div style="font-size: 22px; font-weight: bold;">${{ daily_sales|floatformat:2 }}</div>
+    </div>
+
+    <div class="card" style="background: #e6fffa;">
+      <div style="font-size: 18px; color: #555; margin-bottom: 0.5rem;">
+        <i class="fas fa-calendar-alt"></i> FA'AN FULAN IDA-NE'E
+      </div>
+      <div style="font-size: 22px; font-weight: bold;">${{ monthly_sales|floatformat:2 }}</div>
+    </div>
+
+    <div class="card" style="background: #fff1f2;">
+      <div style="font-size: 18px; color: #555; margin-bottom: 0.5rem;">
+        <i class="fas fa-undo-alt"></i> REFUND OHIN LORON
+      </div>
+      <div style="font-size: 22px; font-weight: bold;">-${{ daily_returns|floatformat:2 }}</div>
+    </div>
+
+    <div class="card" style="background: #fef9c3;">
+      <div style="font-size: 18px; color: #555; margin-bottom: 0.5rem;">
+        <i class="fas fa-undo"></i> REFUND FULAN IDA-NE'E
+      </div>
+      <div style="font-size: 22px; font-weight: bold;">-${{ monthly_returns|floatformat:2 }}</div>
+    </div>
+
+  </div>
+
+  <!-- 📈 Produk Terlaris & Grafik -->
+  <div class="product-graph-section" style="flex: 2 1 700px; display: flex; flex-wrap: wrap; gap: 2rem;">
+
+    <!-- 🥇 Top Produk Terjual -->
+    <div style="flex: 1 1 350px; background: #fff7ed;" class="card">
+      <h3 style="font-size: 18px; margin-bottom: 1rem;">
+        <i class="fas fa-medal"></i> PRODUTU SIRA NEBE FA'AN BARAK LIU:
+      </h3>
+      <ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">
+        {% for p in top_products %}
+          <li>{{ p.product__name }} - {{ p.total_sold }} pcs</li>
+        {% empty %}
+          <li>Tidak ada data penjualan.</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- 📊 Grafik Penjualan -->
+    <div style="flex: 2 1 400px; background: #ffffff; border: 1px solid #ddd;" class="card">
+      <h3 style="font-size: 16px; margin-bottom: 1rem;">
+        <i class="fas fa-chart-bar"></i> GRÁFIKU PRODUTU SIRA NEBE FA'AN
+      </h3>
+      {{ chart|safe }}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

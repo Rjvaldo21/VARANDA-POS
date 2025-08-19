@@ -1,0 +1,25 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}
+  {% if request.path == "/admin/" %}
+    Dashboard | {{ site_title }}
+  {% else %}
+    {{ title }} | {{ site_title }}
+  {% endif %}
+{% endblock %}
+
+{% block content_title %}
+  {% if request.path == "/admin/" %}
+    <h1 style="font-size: 24px; margin-bottom: 1rem;">
+      <i class="fas fa-chart-line text-blue-600"></i> <strong>Relatóriu</strong>
+    </h1>
+  {% else %}
+    {{ title }}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+  {{ block.super }}
+{% endblock %}
+

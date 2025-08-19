@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <h1>Laporan Penjualan</h1>
+  <p><strong>Penjualan Hari Ini:</strong> ${{ daily_sales }}</p>
+  <p><strong>Penjualan Bulan Ini:</strong> ${{ monthly_sales }}</p>
+
+  <h3 class="mt-4">Top Produk Terjual:</h3>
+  <ul>
+    {% for p in top_products %}
+      <li>{{ p.product__name }} - {{ p.total_sold }} pcs</li>
+    {% endfor %}
+  </ul>
+{% endblock %}

@@ -1,0 +1,61 @@
+{
+  "name": "vite-project",
+  "private": true,
+  "version": "1.0.0",
+  "description": "VARANDA POS desktop version",
+  "author": "Nelfarinaunipessoal.lda",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "vite build",
+    "electron:build": "npm run build && electron-builder",
+    "preview": "vite preview",
+    "tw-init": "tailwindcss init -p"
+  },
+  "dependencies": {
+    "axios": "^1.10.0",
+    "jwt-decode": "^4.0.0",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.17",
+    "vue-router": "^4.5.1",
+    "vue3-datepicker": "^0.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.3",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.0",
+    "electron": "^25.9.0",
+    "electron-builder": "^26.0.12",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.1",
+    "vite": "^6.3.5",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.varandapos.app",
+    "productName": "VARANDA POS",
+    "copyright": "© 2025 VARANDA POS",
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend"
+      },
+      {
+        "from": "backend/media",
+        "to": "media"
+      }
+    ],
+
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "icon": "assets/varanda256.ico",
+      "target": "nsis"
+    }
+  }
+}

@@ -1,0 +1,169 @@
+[tool.poetry]
+name = "django-jazzmin"
+version = "0.0.0"
+description = "Drop-in theme for django admin, that utilises AdminLTE 3 & Bootstrap 5 to make yo' admin look jazzy"
+license = "MIT"
+authors = ["Shipit <packages@shipit.ltd>"]
+maintainers = ["Shipit <packages@shipit.ltd>"]
+readme = "README.md"
+homepage = "https://github.com/farridav/django-jazzmin"
+repository = "https://github.com/farridav/django-jazzmin"
+documentation = "https://django-jazzmin.readthedocs.io"
+keywords = ["django", "dashboard", "theme", "admin", "jazzmin"]
+classifiers = [
+    "Environment :: Web Environment",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Internet :: WWW/HTTP :: WSGI",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+packages = [{ include = "jazzmin" }]
+include = ["jazzmin"]
+exclude = ["tests", "docs"]
+
+[tool.poetry.dependencies]
+python = ">=3.9"
+django = ">=4.2"
+
+[tool.poetry.group.dev.dependencies]
+django-debug-toolbar = "^4.4.6" # unparallelled debugging in django
+Werkzeug = "^3.1.3"             # support for werkzeug debugger in runserver_plus
+django-extensions = "^3.2.3"    # Django Sugar for development
+pytest = "^8.3.4"               # Test runner
+pytest-django = "^4.9.0"        # Django integration for pytest
+pytest-cov = "^4.1.0"           # Measure code coverage during tests
+tox = "^4.23.2"                 # Test runner for python packages
+Faker = "^33.1.0"               # less fake fake data
+coveralls = "^3.3.1"            # Publish code coverage to coveralls
+beautifulsoup4 = "^4.12.3"      # Structure HTML documents into navigable things for test assertions
+mkdocs = "^1.6.1"               # Tool for serving rendered markdown docs
+polib = "^1.2.0"                # Tool for dealing with translation files
+factory-boy = "^3.3.1"          # Factory generation
+mypy = "^1.13.0"                # Type checking
+click = "^8.1.7"                # Framework for building cli's
+ipdb = "^0.13.13"               # ipython breakpoints
+ruff = "^0.8.1"                 # linter and code formatter
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/farridav/django-jazzmin/issues"
+"All Releases" = "https://github.com/farridav/django-jazzmin/releases"
+"Latest Release" = "https://github.com/farridav/django-jazzmin/releases/latest"
+"Source" = "https://github.com/farridav/django-jazzmin"
+
+[tool.pytest.ini_options]
+addopts = "--pdbcls=IPython.terminal.debugger:TerminalPdb -p no:warnings --cov=jazzmin"
+junit_family = "xunit2"
+norecursedirs = ".git .tox _resource .mypy_cache build dist docs"
+DJANGO_SETTINGS_MODULE = "tests.test_app.library.settings"
+FAIL_INVALID_TEMPLATE_VARS = 1
+
+[tool.ruff]
+target-version = "py38"
+line-length = 120
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # PEP8 errors
+    "W",    # PEP8 warnings
+    "F",    # PyFlakes
+    "I",    # isort
+    "C",    # mccabe
+    "T201", # flake8-print
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["jazzmin"]
+known-local-folder = ["tests"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 11
+
+[tool.coverage.run]
+omit = ["*/__init__.py", ".tox", ".mypy_cache", ".reports", ".git"]
+
+[tool.coverage.report]
+omit = ["*/__init__.py", ".tox", ".mypy_cache", ".reports", ".git"]
+show_missing = true
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist =
+    django4.2-{python3.9,python3.10,python3.11,python3.12},
+    django5.0-{python3.10,python3.11,python3.12},
+    django5.1-{python3.10,python3.11,python3.12,python3.13},
+    # run one of the tests again but with coverage
+    coveralls-django4.2-python3.12,
+skipsdist = True
+
+[gh-actions]
+python =
+    3.9: python3.9
+    3.10: python3.10
+    3.11: python3.11
+    3.12: python3.12
+    3.13: python3.13
+
+[testenv]
+basepython =
+    python3.9: python3.9
+    python3.10: python3.10
+    python3.11: python3.11
+    python3.12: python3.12
+    python3.13: python3.13
+setenv =
+    PYTHONPATH = {toxinidir}
+commands =
+    {envpython} -m ruff format --check jazzmin
+    {envpython} -m ruff check jazzmin
+    {envpython} -m pytest
+deps =
+    django-jazzmin  # Installing self to allow automatic getting of `version` which needs `django-jazzmin` to be install to get information about the package.
+    pytest
+    pytest-django
+    pytest-cov
+    coveralls
+    mypy
+    ruff
+    beautifulsoup4
+    factory-boy
+    django4.2: Django>=4.2,<5.0
+    django5.0: Django>=5.0,<5.1
+    django5.1: Django>=5.1,<5.2
+
+[testenv:coveralls-django4.2-python3.12]
+passenv = COVERALLS_REPO_TOKEN
+commands =
+    mypy jazzmin --ignore-missing-imports
+    ruff format --check jazzmin tests
+    ruff check jazzmin tests
+    pytest
+    coveralls
+"""
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[[tool.mypy.overrides]]
+module = [
+    "pkg_resources.*",
+]
+ignore_missing_imports = true
