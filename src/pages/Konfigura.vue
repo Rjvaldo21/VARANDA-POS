@@ -223,29 +223,29 @@ const buildLogoUrl = (path) => {
                   <div class="flex items-start gap-2">
                     <input type="checkbox" v-model="useName" />
                     <div>
-                      <label class="font-medium text-sm">Menggunakan Nama</label>
-                      <p class="text-xs text-gray-600">Fitur cari barang di kasir.</p>
+                      <label class="font-medium text-sm">Uza Naran</label>
+                      <p class="text-xs text-gray-600">Fitur buka ba sasán sira iha kasir.</p>
                     </div>
                   </div>
                   <div class="flex items-start gap-2">
                     <input type="checkbox" v-model="autoCapitalize" />
                     <div>
-                      <label class="font-medium text-sm">Otomatis kapital</label>
-                      <p class="text-xs text-gray-600">Semua input huruf besar otomatis.</p>
+                      <label class="font-medium text-sm">Kapitál automátiku</label>
+                      <p class="text-xs text-gray-600">Input hotu-hotu automatikamente kapitaliza.</p>
                     </div>
                   </div>
                   <div class="flex items-start gap-2">
                     <input type="checkbox" v-model="useMinOrder" />
                     <div>
-                      <label class="font-medium text-sm">Gunakan minimum pesanan</label>
-                      <p class="text-xs text-gray-600">Multi harga dengan minimum order.</p>
+                      <label class="font-medium text-sm">Uza pedidu mínimu</label>
+                      <p class="text-xs text-gray-600">Multi-presu ho pedidu mínimu.</p>
                     </div>
                   </div>
                   <div class="flex items-start gap-2">
                     <input type="checkbox" v-model="allowZeroStock" />
                     <div>
-                      <label class="font-medium text-sm">Zero stock able for sale</label>
-                      <p class="text-xs text-gray-600">Zero stock masih bisa dijual.</p>
+                      <label class="font-medium text-sm">Laiha stok disponivel atu fa'an</label>
+                      <p class="text-xs text-gray-600">Zero stok bele fa'an nafatin.</p>
                     </div>
                   </div>
                 </div>
@@ -287,9 +287,9 @@ const buildLogoUrl = (path) => {
               </div>
             </div>
             <div>
-              <label class="text-xs block mb-1">Judul</label>
+              <label class="text-xs block mb-1">Titulu</label>
               <input type="text" class="w-full border px-2 py-1 rounded-sm text-sm" />
-              <label class="text-xs block mt-2 mb-1">Sub Judul</label>
+              <label class="text-xs block mt-2 mb-1">Subtítulu</label>
               <textarea class="w-full border px-2 py-1 rounded-sm text-sm"></textarea>
               <label class="text-xs block mt-2 mb-1">Footer</label>
               <textarea class="w-full border px-2 py-1 rounded-sm text-sm"></textarea>
