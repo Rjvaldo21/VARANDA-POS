@@ -3,50 +3,114 @@ import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
 
-/* ====== AXIOS ====== */
+/* ================= AXIOS + JWT ================= */
 const api = axios.create({ baseURL: 'http://localhost:8000/api' })
-const token = localStorage.getItem('access')
-if (token) api.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
-/* ====== Header toko ====== */
-const store = ref({ name: '', address: '', logo: '', version: '', location: '' })
-const getLogoUrl = (path) => (!path ? '' : (path.startsWith('http') ? path : `http://localhost:8000${path}`))
-const formattedAddress = computed(() => (store.value.address ? store.value.address.replace(/\n/g, '<br />') : ''))
-
-/* ====== State poin ====== */
-const earning = ref([])   // PointsEarningRule
-const redeem  = ref([])   // PointsRedemptionRule
-const perPageLeft = ref(10)
-const perPageRight = ref(10)
-
-/* ====== Helpers ====== */
-const toMoney = (v) => (v == null ? '0.00' : Number(v).toFixed(2))
-const toBool = (v, def=true) => {
-  if (v == null || v === '') return def
-  const s = String(v).trim().toLowerCase()
-  return ['y','ya','yes','true','1'].some(k => s.startsWith(k))
+// Helper ambil token dari berbagai kemungkinan key & storage
+const getFromStores = (keys) => {
+  for (const key of keys) {
+    const v1 = localStorage.getItem(key)
+    if (v1) return v1
+    const v2 = sessionStorage.getItem(key)
+    if (v2) return v2
+  }
+  return null
 }
+const getAccessToken = () =>
+  getFromStores(['access', 'token', 'access_token'])
+const getRefreshToken = () =>
+  getFromStores(['refresh', 'refresh_token'])
 
-/* ====== Fetchers ====== */
-const fetchStore = async () => {
-  try {
-    const res = await api.get('/store-profile/')
-    if (Array.isArray(res.data) && res.data.length > 0) store.value = res.data[0]
-  } catch (e) { console.error('Gagal fetch store profile:', e) }
-}
+// Selalu sisipkan access token terbaru
+api.interceptors.request.use((config) => {
+  const t = getAccessToken()
+  config.headers = config.headers || {}
+  if (t) config.headers.Authorization = `Bearer ${t}`
+  return config
+})
 
+// Auto refresh saat 401 lalu retry request
+let refreshingPromise = null
 api.interceptors.response.use(
   (r) => r,
-  (err) => {
-    const status = err.response?.status
-    const data = err.response?.data
-    const msg = typeof data === 'string' ? data : JSON.stringify(data)
+  async (err) => {
+    const resp = err.response
+    const original = resp?.config
+
+    if (resp?.status === 401 && original && !original._retry) {
+      const refresh = getRefreshToken()
+      if (!refresh) {
+        console.warn('[auth] 401 & no refresh token found')
+        return Promise.reject(err)
+      }
+      try {
+        original._retry = true
+        refreshingPromise =
+          refreshingPromise || axios.post('http://localhost:8000/api/token/refresh/', { refresh })
+        const { data } = await refreshingPromise
+        refreshingPromise = null
+        // simpan access baru
+        localStorage.setItem('access', data.access)
+        // retry request sebelumnya
+        original.headers = original.headers || {}
+        original.headers.Authorization = `Bearer ${data.access}`
+        return api(original)
+      } catch (e) {
+        refreshingPromise = null
+        console.error('[auth] refresh gagal, hapus token')
+        localStorage.removeItem('access')
+        localStorage.removeItem('refresh')
+        sessionStorage.removeItem('access')
+        sessionStorage.removeItem('refresh')
+        return Promise.reject(e)
+      }
+    }
+
+    // Error lain -> tampilkan ringkas
+    const status = resp?.status
+    const msg = typeof resp?.data === 'string' ? resp.data : JSON.stringify(resp?.data)
     console.error('API ERROR', status, msg)
     alert(`API error ${status || ''}: ${msg}`)
     return Promise.reject(err)
   }
 )
 
+// Pastikan ada access token sebelum panggil endpoint protected
+const ensureAuth = async () => {
+  let access = getAccessToken()
+  const refresh = getRefreshToken()
+
+  if (!access && refresh) {
+    try {
+      const { data } = await axios.post('http://localhost:8000/api/token/refresh/', { refresh })
+      access = data.access
+      localStorage.setItem('access', access)
+    } catch (e) {
+      localStorage.removeItem('access'); localStorage.removeItem('refresh')
+      sessionStorage.removeItem('access'); sessionStorage.removeItem('refresh')
+      return false
+    }
+  }
+  // Debug ringkas di console supaya tahu kenapa gagal
+  if (!access) {
+    console.warn('[auth] ensureAuth: tidak menemukan access token di local/sessionStorage')
+  }
+  return !!access
+}
+
+/* ================= Header toko ================= */
+const store = ref({ name: '', address: '', logo: '', version: '', location: '' })
+const getLogoUrl = (path) => (!path ? '' : (path.startsWith('http') ? path : `http://localhost:8000${path}`))
+const formattedAddress = computed(() => (store.value.address ? store.value.address.replace(/\n/g, '<br />') : ''))
+
+/* ================= State poin ================= */
+const earning = ref([])   // PointsEarningRule
+const redeem  = ref([])   // PointsRedemptionRule
+const perPageLeft = ref(10)
+const perPageRight = ref(10)
+
+/* ================= Helpers ================= */
+const toMoney = (v) => (v == null ? '0.00' : Number(v).toFixed(2))
 const asInt = (v) => {
   const n = parseInt(String(v).trim(), 10)
   return Number.isFinite(n) ? n : 0
@@ -56,13 +120,79 @@ const asMoney = (v) => {
   return Number.isFinite(n) ? n.toFixed(2) : '0.00'
 }
 const asBool = (v, def=true) => {
-  if (v == null) return def
+  if (v == null || v === '') return def
   const s = String(v).trim().toLowerCase()
   return ['y','ya','yes','true','1'].some(k => s.startsWith(k))
 }
 
+/* ================= Fetchers ================= */
+const fetchStore = async () => {
+  try {
+    const res = await api.get('/store-profile/')
+    if (Array.isArray(res.data) && res.data.length > 0) store.value = res.data[0]
+  } catch (e) {
+    console.error('Gagal fetch store profile:', e)
+  }
+}
+
+const fetchPoints = async () => {
+  try {
+    const ok = await ensureAuth()
+    if (!ok) { alert('Silakan login terlebih dahulu untuk melihat konfigurasi poin.'); return }
+
+    const [earnRes, redeemRes] = await Promise.all([
+      api.get('/points/earning-rules/'),
+      api.get('/points/redemption-rules/')
+    ])
+
+    earning.value = (earnRes.data || []).map(r => ({
+      id: r.id,
+      name: r.name ?? '',
+      min_total: r.min_total,
+      points_awarded: r.points_awarded,
+      is_active: !!r.is_active
+    }))
+
+    redeem.value = (redeemRes.data || []).map(r => ({
+      id: r.id,
+      name: r.name ?? '',
+      points_required: r.points_required,
+      detail: r.detail ?? '',
+      discount_amount: r.discount_amount ?? '0.00',
+      is_active: !!r.is_active
+    }))
+  } catch (e) {
+    console.error('Gagal fetch poin:', e)
+  }
+}
+
+onMounted(async () => {
+  await fetchStore()
+  await fetchPoints()
+})
+
+/* ================= Actions ================= */
+const refresh = async () => { await fetchPoints() }
+
+/* Toggle is_active via PATCH */
+const toggleActive = async (ctx, row) => {
+  try {
+    const url = ctx === 'redeem'
+      ? `/points/redemption-rules/${row.id}/`
+      : `/points/earning-rules/${row.id}/`
+    await api.patch(url, { is_active: row.is_active })
+  } catch (e) {
+    console.error('Gagal ubah status aktif:', e)
+    alert('Gagal ubah status aktif')
+    row.is_active = !row.is_active // revert
+  }
+}
+
+/* Tambah rule */
 const add = async (ctx) => {
   try {
+    if (!(await ensureAuth())) { alert('Silakan login terlebih dahulu.'); return }
+
     if (ctx === 'redeem') {
       const name = window.prompt('Name?', '') ?? ''
       const points_required = window.prompt('Points required? (angka)', '100'); if (points_required === null) return
@@ -91,63 +221,14 @@ const add = async (ctx) => {
       }, { headers: { 'Content-Type': 'application/json' } })
     }
     await fetchPoints()
-  } catch (e) {
-    // interceptor sudah alert detail error
-  }
+  } catch (e) {}
 }
 
-const fetchPoints = async () => {
-  try {
-    const [earnRes, redeemRes] = await Promise.all([
-      api.get('/points/earning-rules/'),
-      api.get('/points/redemption-rules/')
-    ])
-
-    earning.value = (earnRes.data || []).map(r => ({
-      id: r.id,
-      name: r.name ?? '',
-      min_total: r.min_total,                 // decimal string/number
-      points_awarded: r.points_awarded,       // int
-      is_active: !!r.is_active
-    }))
-
-    redeem.value = (redeemRes.data || []).map(r => ({
-      id: r.id,
-      name: r.name ?? '',
-      points_required: r.points_required,     // int
-      detail: r.detail ?? '',
-      discount_amount: r.discount_amount ?? '0.00',
-      is_active: !!r.is_active
-    }))
-  } catch (e) {
-    console.error('Gagal fetch poin:', e)
-  }
-}
-
-onMounted(async () => {
-  await fetchStore()
-  await fetchPoints()
-})
-
-/* ====== Actions ====== */
-const refresh = async () => { await fetchPoints() }
-
-/* Toggle is_active via PATCH */
-const toggleActive = async (ctx, row) => {
-  try {
-    const url = ctx === 'redeem'
-      ? `/points/redemption-rules/${row.id}/`
-      : `/points/earning-rules/${row.id}/`
-    await api.patch(url, { is_active: row.is_active })
-  } catch (e) {
-    console.error('Gagal ubah status aktif:', e)
-    alert('Gagal ubah status aktif')
-    row.is_active = !row.is_active // revert
-  }
-}
-
+/* Edit rule */
 const edit = async (ctx) => {
   try {
+    if (!(await ensureAuth())) { alert('Silakan login terlebih dahulu.'); return }
+
     if (ctx === 'redeem') {
       if (redeem.value.length === 0) return alert('Belum ada data')
       const id = window.prompt('ID rule yang mau diedit?', redeem.value[0]?.id || ''); if (!id) return
@@ -163,7 +244,7 @@ const edit = async (ctx) => {
         points_required: Number(points_required || 0),
         detail,
         discount_amount
-      })
+      }, { headers: { 'Content-Type': 'application/json' } })
     } else {
       if (earning.value.length === 0) return alert('Belum ada data')
       const id = window.prompt('ID rule yang mau diedit?', earning.value[0]?.id || ''); if (!id) return
@@ -177,7 +258,7 @@ const edit = async (ctx) => {
         name,
         min_total: min_total || '0.00',
         points_awarded: Number(points_awarded || 0)
-      })
+      }, { headers: { 'Content-Type': 'application/json' } })
     }
     await fetchPoints()
   } catch (e) {
@@ -186,8 +267,11 @@ const edit = async (ctx) => {
   }
 }
 
+/* Hapus rule */
 const remove = async (ctx) => {
   try {
+    if (!(await ensureAuth())) { alert('Silakan login terlebih dahulu.'); return }
+
     const arr = ctx === 'redeem' ? redeem.value : earning.value
     if (arr.length === 0) return alert('Belum ada data')
     const id = window.prompt('ID rule yang mau dihapus?', arr[0]?.id || ''); if (!id) return
@@ -200,7 +284,6 @@ const remove = async (ctx) => {
   }
 }
 </script>
-
 
 <template>
   <div class="bg-white border border-gray-50 rounded-sm shadow text-sm flex flex-col h-full">
@@ -307,3 +390,4 @@ const remove = async (ctx) => {
 table { border-collapse: collapse; }
 th, td { font-size: 13px; }
 </style>
+
