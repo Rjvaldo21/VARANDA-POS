@@ -112,10 +112,11 @@ const submitSuperuser = async () => {
           Login
         </button>
 
-        <p class="text-sm text-center text-gray-500 mt-4">
+        <!-- <p class="text-sm text-center text-gray-500 mt-4">
           Seidauk iha superuser?
           <a href="#" class="text-blue-600 underline" @click="openCreateSuperuser">Kria Superuser</a>
-        </p>
+        </p> -->
+        
       </div>
     </div>
 

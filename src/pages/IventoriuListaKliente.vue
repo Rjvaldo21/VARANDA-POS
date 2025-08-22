@@ -219,51 +219,63 @@ const refresh = () => fetchCustomers()
 
     <!-- Table + Filter -->
     <div class="p-2 flex flex-col flex-1 overflow-hidden">
-      <div class="flex-1 overflow-x-auto border border-gray-300">
-        <table class="min-w-[900px] w-full border-collapse text-sm table-fixed">
+      <div class="flex-1 overflow-x-auto border border-gray-300 rounded-sm scrollbar-stable">
+        <table class="w-full min-w-[1000px] xl:min-w-0 border-collapse text-sm table-fixed">
+          <colgroup>
+            <col style="width:12%" /> 
+            <col style="width:20%" /> 
+            <col style="width:15%" /> 
+            <col style="width:20%" /> 
+            <col style="width:19%" /> 
+            <col style="width:7%; min-width:90px" /> 
+            <col style="width:7%; min-width:90px" />
+          </colgroup>
+
           <thead class="bg-gradient-to-b from-white to-gray-100">
-            <!-- Header Row -->
             <tr>
-              <th class="border border-gray-300 px-2 py-1 w-[10%] text-left">Numeru</th>
-              <th class="border border-gray-300 px-2 py-1 w-[20%] text-left">Naran</th>
-              <th class="border border-gray-300 px-2 py-1 w-[15%] text-left">Telemovel</th>
-              <th class="border border-gray-300 px-2 py-1 w-[20%] text-left">Email</th>
-              <th class="border border-gray-300 px-2 py-1 w-[20%] text-left">Enderesu</th>
-              <th class="border border-gray-300 px-2 py-1 w-[7%] text-right">Pontus</th>
-              <th class="border border-gray-300 px-2 py-1 w-[8%] text-right">Piutang</th>
+              <th class="th text-left">Numeru</th>
+              <th class="th text-left">Naran</th>
+              <th class="th text-left">Telemovel</th>
+              <th class="th text-left">Email</th>
+              <th class="th text-left">Enderesu</th>
+              <th class="th text-right">Pontus</th>
+              <th class="th text-right">Piutang</th>
             </tr>
-            <!-- Filter Row -->
+
             <tr>
-              <th class="border px-2 py-1">
-                <input v-model="filter.nomor" type="text" placeholder="Numeru" class="w-full border px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.nomor"   type="text" placeholder="Numeru"   class="f-input" />
               </th>
-              <th class="border px-2 py-1">
-                <input v-model="filter.nama" type="text" placeholder="Naran" class="w-full border px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.nama"    type="text" placeholder="Naran"    class="f-input" />
               </th>
-              <th class="border px-2 py-1">
-                <input v-model="filter.telepon" type="text" placeholder="Telemovel" class="w-full border px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.telepon" type="text" placeholder="Telemovel" class="f-input" />
               </th>
-              <th class="border px-2 py-1">
-                <input v-model="filter.email" type="text" placeholder="Email" class="w-full border px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.email"   type="text" placeholder="Email"    class="f-input" />
               </th>
-              <th colspan="3"></th>
+              <th class="th"></th>
+              <th class="th"></th>
+              <th class="th"></th>
             </tr>
           </thead>
+
           <tbody>
             <tr
-                v-for="item in filteredCustomers"
-                  :key="item.nomor"
-                  class="hover:bg-gray-50 cursor-pointer"
-                  :class="{ 'bg-blue-50': selectedCustomer?.nomor === item.nomor }"
-                  @click="selectedCustomer = item"
-                >
-              <td class="border px-2 py-1">{{ item.nomor }}</td>
-              <td class="border px-2 py-1">{{ item.nama }}</td>
-              <td class="border px-2 py-1">{{ item.telepon }}</td>
-              <td class="border px-2 py-1">{{ item.email }}</td>
-              <td class="border px-2 py-1">{{ item.alamat }}</td>
-              <td class="border px-2 py-1 text-right">{{ item.poin }}</td>
-              <td class="border px-2 py-1 text-right">{{ formatPrice(item.piutang) }}</td>
+              v-for="item in filteredCustomers"
+              :key="item.nomor"
+              class="hover:bg-gray-50 cursor-pointer"
+              :class="{ 'bg-blue-50': selectedCustomer?.nomor === item.nomor }"
+              @click="selectedCustomer = item"
+            >
+              <td class="td"      :title="item.nomor">{{ item.nomor || '-' }}</td>
+              <td class="td"      :title="item.nama">{{ item.nama || '-' }}</td>
+              <td class="td"      :title="item.telepon">{{ item.telepon || '-' }}</td>
+              <td class="td"      :title="item.email">{{ item.email || '-' }}</td>
+              <td class="td"      :title="item.alamat">{{ item.alamat || '-' }}</td>
+              <td class="td td-num">{{ item.poin ?? 0 }}</td>
+              <td class="td td-num">{{ formatPrice(item.piutang ?? 0) }}</td>
             </tr>
           </tbody>
         </table>
@@ -303,10 +315,28 @@ const refresh = () => fetchCustomers()
 </template>
 
 <style scoped>
-table {
-  border-collapse: collapse;
-}
-th, td {
+
+table { border-collapse: collapse; table-layout: fixed; }
+
+.th, .td {
   font-size: 13px;
+  white-space: nowrap;      
+  overflow: hidden;         
+  text-overflow: ellipsis;  
+  vertical-align: middle;
+  padding: 0.25rem 0.5rem; 
+  border: 1px solid #e5e7eb;
+}
+
+.td-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.f-input {
+  width: 100%;
+  padding: 0.25rem 0.375rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background: #fff;
 }
 </style>

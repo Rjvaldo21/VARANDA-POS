@@ -56,26 +56,24 @@ const deleteSupplier = async () => {
     selectedSupplier.value = null
     alert('🗑️ Fornesédor apaga ho susesu')
   } catch (error) {
-    console.error('Gagal apaga:', error)
-    alert('Erro ao apaga fornesédor')
+    console.error('Falha apaga:', error)
+    alert('Erru bainhira apaga fornesédor')
   }
 }
 
 const saveSupplier = async () => {
   if (!supplierForm.value.name) {
-    alert('⚠️ Naran fornesédor wajib')
+    alert('⚠️ Naran fornesédor labele mamuk')
     return
   }
 
   const token = localStorage.getItem('token')
   try {
     if (selectedSupplier.value) {
-      // Edit
       await axios.put(`http://localhost:8000/api/suppliers/${selectedSupplier.value.id}/`, supplierForm.value, {
         headers: { Authorization: `Bearer ${token}` }
       })
     } else {
-      // Tambah
       await axios.post('http://localhost:8000/api/suppliers/', supplierForm.value, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -119,7 +117,6 @@ onMounted(async () => {
       }
     })
 
-    // Tambahkan kode dummy jika tidak tersedia
     suppliers.value = response.data.map((s, index) => ({
       ...s,
       kode: s.kode || `SUP-${index + 1}`
@@ -173,48 +170,55 @@ const refresh = async () => {
 
     <!-- Table + Filter -->
     <div class="p-2 flex flex-col flex-1 overflow-hidden">
-      <div class="flex-1 overflow-x-auto border border-gray-300">
-        <table class="min-w-[800px] w-full border-collapse text-sm table-fixed">
+      <div class="flex-1 overflow-x-auto border border-gray-300 rounded-sm scrollbar-stable">
+        <table class="w-auto max-w-none min-w-[900px] lg:min-w-[1100px] xl:min-w-0 border-collapse text-sm table-fixed">
+          <colgroup>
+            <col style="width:24%" /> 
+            <col style="width:10%" /> 
+            <col style="width:18%" /> 
+            <col style="width:20%" /> 
+            <col style="width:28%" /> 
+          </colgroup>
+
           <thead class="bg-gradient-to-b from-white to-gray-100">
             <tr>
-              <th class="border border-gray-300 px-2 py-1 text-left w-[25%]">Naran</th>
-              <th class="border border-gray-300 px-2 py-1 text-left w-[10%]">Kodigu</th>
-              <th class="border border-gray-300 px-2 py-1 text-left w-[25%]">Telemovel</th>
-              <th class="border border-gray-300 px-2 py-1 text-left w-[25%]">Email</th>
-              <th class="border border-gray-300 px-2 py-1 text-left">Enderesu</th>
+              <th class="th text-left">Naran</th>
+              <th class="th text-left">Kodigu</th>
+              <th class="th text-left">Telemovel</th>
+              <th class="th text-left">Email</th>
+              <th class="th text-left">Enderesu</th>
             </tr>
-            <!-- Filter Inputs -->
             <tr>
-              <th class="border border-gray-300 px-2 py-1">
-                <input v-model="filter.name" type="text" placeholder="Nama" class="w-full border border-gray-300 px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.name"  type="text" placeholder="Nama"    class="f-input" />
               </th>
-              <th class="border border-gray-300 px-2 py-1">
-                <input v-model="filter.kode" type="text" placeholder="Kode" class="w-full border border-gray-300 px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.kode"  type="text" placeholder="Kode"    class="f-input" />
               </th>
-              <th class="border border-gray-300 px-2 py-1">
-                <input v-model="filter.phone" type="text" placeholder="Telepon" class="w-full border border-gray-300 px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.phone" type="text" placeholder="Telepon" class="f-input" />
               </th>
-              <th class="border border-gray-300 px-2 py-1">
-                <input v-model="filter.email" type="text" placeholder="Email" class="w-full border border-gray-300 px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.email" type="text" placeholder="Email"   class="f-input" />
               </th>
-              <th class="border border-gray-300 px-2 py-1"></th>
+              <th class="th"></th>
             </tr>
           </thead>
+
           <tbody>
             <tr
-                v-for="supplier in filteredSuppliers"
-                :key="supplier.id"
-                :class="[
-                  'cursor-pointer',
-                  selectedSupplier?.id === supplier.id ? 'bg-blue-50' : 'hover:bg-gray-50'
-                ]"
-                @click="selectedSupplier = supplier"
-              >
-              <td class="border border-gray-300 px-2 py-1">{{ supplier.name }}</td>
-              <td class="border border-gray-300 px-2 py-1">{{ supplier.kode }}</td>
-              <td class="border border-gray-300 px-2 py-1">{{ supplier.phone }}</td>
-              <td class="border border-gray-300 px-2 py-1">{{ supplier.email }}</td>
-              <td class="border border-gray-300 px-2 py-1">{{ supplier.address }}</td>
+              v-for="supplier in filteredSuppliers"
+              :key="supplier.id"
+              :class="[
+                'hover:bg-gray-50 cursor-pointer'
+              ]"
+              @click="selectedSupplier = supplier"
+            >
+              <td class="td" :title="supplier.name">{{ supplier.name || '-' }}</td>
+              <td class="td" :title="supplier.kode">{{ supplier.kode || '-' }}</td>
+              <td class="td" :title="supplier.phone">{{ supplier.phone || '-' }}</td>
+              <td class="td" :title="supplier.email">{{ supplier.email || '-' }}</td>
+              <td class="td" :title="supplier.address">{{ supplier.address || '-' }}</td>
             </tr>
           </tbody>
         </table>
@@ -222,7 +226,6 @@ const refresh = async () => {
 
       <!-- Footer -->
       <div class="flex justify-between items-center mt-2 text-xs">
-        <!-- Modal Tambah/Edit Supplier -->
         <div v-if="showModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
           <div class="bg-white p-4 rounded shadow w-full max-w-md space-y-3">
             <h2 class="text-lg font-semibold">{{ selectedSupplier ? '✏️ Edit Fornesédor' : '➕ Tambah Fornesédor' }}</h2>
@@ -257,10 +260,28 @@ const refresh = async () => {
 </template>
 
 <style scoped>
-table {
-  border-collapse: collapse;
-}
-th, td {
+
+table { border-collapse: collapse; table-layout: fixed; }
+
+.th, .td {
   font-size: 13px;
+  white-space: nowrap;      
+  overflow: hidden;         
+  text-overflow: ellipsis; 
+  vertical-align: middle;
+  padding: 0.25rem 0.5rem;  
+  border: 1px solid #e5e7eb;
+}
+
+.td-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.f-input {
+  width: 100%;
+  padding: 0.25rem 0.375rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background: #fff;
 }
 </style>

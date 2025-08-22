@@ -231,19 +231,19 @@ const editItem = async (item) => {
 
 const deleteItem = async (item) => {
   if (!item) return
-  if (!confirm(`Apakah Anda yakin ingin menghapus ${item.name}?`)) return
+  if (!confirm(`Ita-boot iha serteza hakarak atu hamoos? ${item.name}?`)) return
 
   const token = localStorage.getItem('token')
   try {
     await axios.delete(`http://localhost:8000/api/products/${item.id}/`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    alert('✅ Produk berhasil dihapus.')
+    alert('✅ Produtu halakon ho susesu.')
     refresh()
     selectedItem.value = null
   } catch (err) {
-    console.error('❌ Gagal menghapus produk:', err)
-    alert('Terjadi kesalahan saat menghapus produk.')
+    console.error('❌ Falha halakon produtu:', err)
+    alert('Akontese erru bainhira halakon produtu.')
   }
 }
 
@@ -277,7 +277,7 @@ const refresh = async () => {
   try {
     await loadProducts()
   } catch (error) {
-    console.error('Gagal muat ulang data:', error)
+    console.error('Falha hafoun data:', error)
   }
 }
 
@@ -298,59 +298,71 @@ const refresh = async () => {
 
     <!-- Table + Filter -->
     <div class="p-2 flex flex-col flex-1 overflow-hidden">
-      <div class="flex-1 overflow-x-auto border border-gray-300">
-        <table class="min-w-[900px] w-full border-collapse text-sm table-fixed">
+      <div class="flex-1 overflow-x-auto border border-gray-300 rounded-sm scrollbar-stable">
+        <table class="w-auto max-w-none min-w-[1000px] lg:min-w-[1200px] xl:min-w-0 border-collapse text-sm table-fixed">
+          <colgroup>
+            <col style="width:14%" /> 
+            <col style="width:22%" /> 
+            <col style="width:12%" /> 
+            <col style="width:12%" /> 
+            <col style="width:9%"  /> 
+            <col style="width:9%"  /> 
+            <col style="width:12%" /> 
+            <col style="width:20%" />
+          </colgroup>
+
           <thead class="bg-gradient-to-b from-white to-gray-100">
             <!-- Header Row -->
             <tr>
-              <th class="border border-gray-300 px-2 py-1 w-[10%] text-left">Barcode</th>
-              <th class="border border-gray-300 px-2 py-1 w-[20%] text-left">Naran</th>
-              <th class="border border-gray-300 px-2 py-1 w-[10%] text-right">Presu Kompra</th>
-              <th class="border border-gray-300 px-2 py-1 w-[10%] text-right">Presu Fa'an</th>
-              <th class="border border-gray-300 px-2 py-1 w-[8%] text-right">Stok</th>
-              <th class="border border-gray-300 px-2 py-1 w-[8%] text-center">Unidade</th>
-              <th class="border border-gray-300 px-2 py-1 w-[15%] text-left">Kategoria</th>
-              <th class="border border-gray-300 px-2 py-1 text-left">Supplier</th>
+              <th class="th text-left">Barcode</th>
+              <th class="th text-left">Naran</th>
+              <th class="th text-right">Presu Kompra</th>
+              <th class="th text-right">Presu Fa'an</th>
+              <th class="th text-right">Stok</th>
+              <th class="th text-center">Unidade</th>
+              <th class="th text-left">Kategoria</th>
+              <th class="th text-left">Supplier</th>
             </tr>
-            <!-- Filter Row -->
+
             <tr>
-              <th class="border border-gray-300 px-2 py-1">
-                <input v-model="filter.barcode" type="text" placeholder="Barcode" class="w-full border px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.barcode" type="text" placeholder="Barcode" class="f-input" />
               </th>
-              <th class="border border-gray-300 px-2 py-1">
-                <input v-model="filter.nama" type="text" placeholder="Naran" class="w-full border px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.nama" type="text" placeholder="Naran" class="f-input" />
               </th>
-              <th colspan="2" class="border border-gray-300 px-2 py-1 text-center text-gray-400">Presu</th>
-              <th colspan="2" class="border border-gray-300 px-2 py-1 text-center text-gray-400">Stok</th>
-              <th class="border border-gray-300 px-2 py-1">
-                <select v-model="filter.kategori" class="w-full border px-1 py-1 rounded-sm text-sm">
+              <th colspan="2" class="th text-center text-gray-400">Presu</th>
+              <th colspan="2" class="th text-center text-gray-400">Stok</th>
+              <th class="th">
+                <select v-model="filter.kategori" class="f-input">
                   <option value="">-- Hili Kategoria --</option>
                   <option>Food</option>
                   <option>Snack</option>
                   <option>Drink</option>
                 </select>
               </th>
-              <th class="border border-gray-300 px-2 py-1">
-                <input v-model="filter.supplier" type="text" placeholder="Supplier" class="w-full border px-2 py-1 rounded-sm" />
+              <th class="th">
+                <input v-model="filter.supplier" type="text" placeholder="Supplier" class="f-input" />
               </th>
             </tr>
           </thead>
+
           <tbody>
             <tr
               v-for="item in filteredItems"
-                :key="item.barcode"
-                class="hover:bg-gray-50 cursor-pointer"
-                @click="selectedItem = item"
-                :class="{ 'bg-blue-50': selectedItem?.sku === item.sku }"
-              >
-              <td class="border px-2 py-1">{{ item.barcode }}</td>
-              <td class="border px-2 py-1">{{ item.name }}</td>
-              <td class="border px-2 py-1 text-right">{{ formatPrice(item.cost_price) }}</td>
-              <td class="border px-2 py-1 text-right">{{ formatPrice(item.price) }}</td>
-              <td class="border px-2 py-1 text-right">{{ item.stock }}</td>
-              <td class="border px-2 py-1 text-center">{{ item.satuan }}</td>
-              <td class="border px-2 py-1">{{ item.kategori }}</td>
-              <td class="border px-2 py-1">{{ item.supplier_name }}</td>
+              :key="item.barcode"
+              class="hover:bg-gray-50 cursor-pointer"
+              @click="selectedItem = item"
+              :class="{ 'bg-blue-50': selectedItem?.sku === item.sku }"
+            >
+              <td class="td"      :title="item.barcode">{{ item.barcode || '-' }}</td>
+              <td class="td"      :title="item.name">{{ item.name || '-' }}</td>
+              <td class="td td-num">{{ formatPrice(item.cost_price) }}</td>
+              <td class="td td-num">{{ formatPrice(item.price) }}</td>
+              <td class="td td-num">{{ item.stock ?? 0 }}</td>
+              <td class="td td-center">{{ item.satuan || '-' }}</td>
+              <td class="td"      :title="item.kategori">{{ item.kategori || '-' }}</td>
+              <td class="td"      :title="item.supplier_name">{{ item.supplier_name || '-' }}</td>
             </tr>
           </tbody>
         </table>
@@ -422,13 +434,11 @@ const refresh = async () => {
 
       <!-- Footer -->
       <div class="flex justify-between items-center mt-2 text-xs">
-        <!-- Pagination -->
         <div>
           <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
             <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
           </select>
         </div>
-        <!-- Action Buttons -->
         <div class="space-x-2 text-base">
           <button @click="refresh" class="hover:text-blue-600">🔄</button>
           <button @click="addItem" class="hover:text-green-600">➕</button>
@@ -454,16 +464,28 @@ const refresh = async () => {
 </template>
 
 <style scoped>
-table {
-  border-collapse: collapse;
-}
+table { border-collapse: collapse; table-layout: fixed; }
 
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-th, td {
+.th, .td {
   font-size: 13px;
+  white-space: nowrap;      
+  overflow: hidden;         
+  text-overflow: ellipsis;  
+  vertical-align: middle;
+  padding: 0.25rem 0.5rem;  
+  border: 1px solid #e5e7eb;
+}
+
+.td-num { text-align: right; font-variant-numeric: tabular-nums; }
+.td-center { text-align: center; }
+
+.f-input {
+  width: 100%;
+  padding: 0.25rem 0.375rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background: #fff;
 }
 </style>

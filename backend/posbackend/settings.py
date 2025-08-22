@@ -175,23 +175,21 @@ JAZZMIN_SETTINGS = {
         "pos.Supplier": "fas fa-truck",
         "pos.StockAdjustment": "fas fa-tools",
 
-        # ❗ Perbaiki kelas FA6 -> FA5
-        "pos.StockMovement": "fas fa-exchange-alt",   # was fa-solid fa-right-left
-        "pos.Stock": "fas fa-cubes",                  # was fa-solid fa-cubes
-        "pos.Warehouse": "fas fa-warehouse",         # was fa-solid fa-warehouse
+        # ❗ FA5
+        "pos.StockMovement": "fas fa-exchange-alt",
+        "pos.Stock": "fas fa-cubes",
+        "pos.Warehouse": "fas fa-warehouse",
 
         # 💵 Transaksi & Purchase
         "pos.Transaction": "fas fa-receipt",
         "pos.ProductReturn": "fas fa-undo",
         "pos.Purchase": "fas fa-shopping-cart",
         "pos.PurchaseReturn": "fas fa-clipboard",
+        "pos.PurchaseItem": "fas fa-cart-plus",
         "pos.Bank": "fas fa-university",
         "pos.BankPayment": "fas fa-money-check-alt",
-        
 
-        "pos.PurchaseItem": "fas fa-cart-plus",
-
-        # 🔁 Stock Transfers (pastikan nama model benar persis)
+        # 🔁 Stock Transfers
         "pos.StockTransfer": "fas fa-exchange-alt",
 
         # 👥 Pelanggan
@@ -201,12 +199,18 @@ JAZZMIN_SETTINGS = {
         # 🏬 Toko
         "pos.StoreProfile": "fas fa-store",
 
+        # ⭐️ Poin (NEW)
+        "pos.PointsEarningRule": "fas fa-coins",
+        "pos.PointsRedemptionRule": "fas fa-gift",
+        "pos.PointsLedger": "fas fa-history",
+
         # 🔒 Administrasaun
         "auth.User": "fas fa-user-shield",
         "auth.Group": "fas fa-users-cog",
         "pos.BackupUpload": "fas fa-upload",
     },
 
+    # Grup menu di sidebar
     "models": {
         # Grup Transaksi
         "pos.Transaction": "Transaksi",
@@ -215,8 +219,8 @@ JAZZMIN_SETTINGS = {
         "pos.PurchaseItem": "Transaksi",
         "pos.PurchaseReturn": "Transaksi",
         "pos.StockTransfer": "Transaksi",
-        "pos.Bank": "Transaksi",          # <- tambahkan
-        "pos.BankPayment": "Transaksi",   # <- tambahkan
+        "pos.Bank": "Transaksi",
+        "pos.BankPayment": "Transaksi",
 
         # Grup Produk
         "pos.Product": "Produk",
@@ -225,12 +229,17 @@ JAZZMIN_SETTINGS = {
         "pos.Supplier": "Produk",
         "pos.StockAdjustment": "Produk",
 
-        # Grup Kliente
+        # Grup Pelanggan
         "pos.Customer": "Pelanggan",
         "pos.Profile": "Pelanggan",
 
-        # Grup Loja
+        # Grup Toko
         "pos.StoreProfile": "Toko",
+
+        # Grup Poin (NEW)
+        "pos.PointsEarningRule": "Poin",
+        "pos.PointsRedemptionRule": "Poin",
+        "pos.PointsLedger": "Poin",
 
         # Admin
         "auth.User": "Administrasaun",
@@ -250,22 +259,32 @@ JAZZMIN_SETTINGS = {
         "pos.PurchaseItem",
         "pos.PurchaseReturn",
         "pos.StockTransfer",
+
+        # Pelanggan
         "pos.Customer",
         "pos.Profile",
+
+        # Poin (NEW) — urutkan dekat Pelanggan jika mau
+        "pos.PointsEarningRule",
+        "pos.PointsRedemptionRule",
+        "pos.PointsLedger",
+
+        # Toko & Admin
         "pos.StoreProfile",
         "auth.User",
         "auth.Group",
         "pos.BackupUpload",
     ],
-    
+
     "custom_links": {
-        "pos.Transaction": [  
+        "pos.Transaction": [
             {
                 "name": "📦 Backup Data",
-                "url": "backup_data",  
+                "url": "backup_data",
                 "icon": "fa fa-download",
-                "permissions": ["auth.view_user"] 
+                "permissions": ["auth.view_user"]
             }
         ]
     },
 }
+

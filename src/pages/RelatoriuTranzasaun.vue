@@ -337,9 +337,6 @@ const getLogoUrl = (path) => {
           </thead>
           <tbody>
             <tr v-if="filteredTransactions.length === 0">
-              <td class="border px-2 py-3 text-center text-xs text-gray-500" colspan="5">
-                La iha dadus iha periodu ne'e
-              </td>
             </tr>
             <tr v-for="(trx, index) in filteredTransactions" :key="index">
               <td class="border px-2 py-1 text-xs">{{ trx.date }}</td>
