@@ -157,7 +157,7 @@ const downloadLaporan = () => {
 </script>
 
 <template>
-  <div class="bg-white border border-gray-50 rounded-sm shadow text-sm flex flex-col h-full">
+  <div class="bg-white border border-gray-200 rounded-sm shadow text-sm flex flex-col h-full">
     <!-- Header -->
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
@@ -168,100 +168,89 @@ const downloadLaporan = () => {
       <h1 class="text-lg font-semibold">RELATORIU PRODUTU</h1>
     </div>
 
-       <!-- Table -->
-        <div class="flex items-center gap-2 mx-2 mt-2">
-          <select @change="handleFilterChange($event)" class="border px-2 py-1 text-sm rounded-sm">
-            <option :value="'today'">📅 {{ todayFormatted }}</option>
-            <option value="week">📈 Semana</option>
-            <option value="month">📆 Fulan</option>
-            <option value="">🗓️ Hili kalendariu</option>
-          </select>
-        </div>
+    <!-- Filter rentang waktu -->
+    <div class="flex items-center gap-2 mx-2 mt-2">
+      <select @change="handleFilterChange($event)" class="border px-2 py-1 text-sm rounded-sm">
+        <option :value="'today'">📅 {{ todayFormatted }}</option>
+        <option value="week">📈 Semana</option>
+        <option value="month">📆 Fulan</option>
+        <option value="">🗓️ Hili kalendariu</option>
+      </select>
+    </div>
 
-        <!-- Table + Footer wrapper -->
-        <div class="flex-1 overflow-auto border border-gray-300 mx-2 mt-2">
-          <table class="w-full table-auto border-collapse text-sm">
-            <thead class="bg-gradient-to-b from-white to-gray-100">
-              <tr>
-                <th class="border px-2 py-1 w-32">Barcode</th>
-                <th class="border px-2 py-1 w-48">Naran</th>
-                <th class="border px-2 py-1 w-28 text-center">Kasir</th>
-                <th class="border px-2 py-1 w-20 text-right">Terjual</th>
-                <th class="border px-2 py-1 w-20 text-center">Unidade</th>
-                <th class="border px-2 py-1 w-28 text-center">Kategoria</th>
-                <th class="border px-2 py-1 w-40 text-center">Fornesedór</th>
-                <th class="border px-2 py-1 w-20 text-right">Stok</th>
-                <th class="border px-2 py-1 w-28 text-right">Presu Kompra</th>
-                <th class="border px-2 py-1 w-28 text-right">Presu Fa'an</th>
-                <th class="border px-2 py-1 w-32 text-right">Total Fa'an</th>
-                <th class="border px-2 py-1 w-24 text-right">Margin</th>
-              </tr>
-              <tr>
-                <th class="border px-2 py-1">
-                  <input v-model="filter.barcode" type="text" placeholder="Barcode"
-                        class="border px-1 py-0.5 rounded-sm w-full" />
-                </th>
-                <th class="border px-2 py-1">
-                  <input v-model="filter.nama" type="text" placeholder="Naran"
-                        class="border px-1 py-0.5 rounded-sm w-full" />
-                </th>
-                <th class="border px-2 py-1"></th>
-                <th class="border px-2 py-1"></th>
-                <th class="border px-2 py-1"></th>
-                <th class="border px-2 py-1"></th>
-                <th class="border px-2 py-1"></th>
-                <th class="border px-2 py-1"></th>
-                <th class="border px-2 py-1"></th>
-                <th class="border px-2 py-1"></th>
-                <th class="border px-2 py-1"></th>
-                <th class="border px-2 py-1"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="filteredData.length === 0">
-                <td colspan="12" class="text-center italic text-gray-500 py-4"></td>
-              </tr>
-              <tr v-for="(r, idx) in filteredData" :key="idx" class="hover:bg-gray-50">
-                <td class="border px-2 py-1">{{ r.barcode }}</td>
-                <td class="border px-2 py-1">{{ r.name }}</td>
-                <td class="border px-2 py-1 text-center">{{ r.cashier || '-' }}</td>
-                <td class="border px-2 py-1 text-right">{{ r.qty_sold }}</td>
-                <td class="border px-2 py-1 text-center">{{ r.unit || '-' }}</td>
-                <td class="border px-2 py-1 text-center">{{ r.category || '-' }}</td>
-                <td class="border px-2 py-1 text-center">{{ r.supplier || '-' }}</td>
-                <td class="border px-2 py-1 text-right">{{ r.stock }}</td>
-                <td class="border px-2 py-1 text-right">{{ formatPrice(r.buy_price) }}</td>
-                <td class="border px-2 py-1 text-right">{{ formatPrice(r.sell_price) }}</td>
-                <td class="border px-2 py-1 text-right font-semibold">{{ formatPrice(r.total_sales) }}</td>
-                <td class="border px-2 py-1 text-right">{{ formatPrice(r.margin) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <!-- Table -->
+    <div class="flex-1 overflow-auto border border-gray-300 mx-2 mt-2">
+      <table class="w-full table-fixed border-collapse text-sm">
+        <thead class="bg-gradient-to-b from-white to-gray-100">
+          <tr>
+            <th class="border px-2 py-1 w-32">Barcode</th> 
+            <th class="border px-2 py-1 w-48">Naran</th> 
+            <th class="border px-2 py-1 w-28 text-center">Kasir</th> 
+            <th class="border px-2 py-1 w-20 text-right">Terjual</th> 
+            <th class="border px-2 py-1 w-20 text-center">Unidade</th> 
+            <th class="border px-2 py-1 w-28 text-center">Kategoria</th> 
+            <th class="border px-2 py-1 w-40 text-center">Fornesedór</th> 
+            <th class="border px-2 py-1 w-20 text-right">Stok</th> 
+            <th class="border px-2 py-1 w-28 text-right">Presu Kompra</th> 
+            <th class="border px-2 py-1 w-28 text-right">Presu Fa'an</th> 
+            <th class="border px-2 py-1 w-32 text-right">Total Fa'an</th> 
+            <th class="border px-2 py-1 w-24 text-right">Margin</th> </tr>
+          <tr>
+            <th class="th">
+              <input
+                v-model="filter.barcode"
+                type="text"
+                placeholder="Barcode"
+                class="border px-2 py-1 rounded-sm w-full text-sm"
+              />
+            </th>
+            <th class="th">
+              <input
+                v-model="filter.nama"
+                type="text"
+                placeholder="Naran"
+                class="border px-2 py-1 rounded-sm w-full text-sm"
+              />
+            </th>
+            <th class="th"></th>
+            <th class="th"></th>
+            <th class="th"></th>
+            <th class="th"></th>
+            <th class="th"></th>
+            <th class="th"></th>
+            <th class="th"></th>
+            <th class="th"></th>
+            <th class="th"></th>
+            <th class="th"></th>
+          </tr>
+        </thead>
 
-        <!-- Modal DITARUH DI SINI -->
-        <div v-if="showDatePopup" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div class="bg-white p-4 rounded shadow w-[300px]">
-            <h2 class="text-sm font-semibold mb-2">Hili Data Manual</h2>
-            <div class="mb-2">
-              <label class="text-xs">Data Inísiu:</label>
-              <input v-model="manualStart" type="date" class="border px-1 py-0.5 w-full rounded-sm" />
-            </div>
-            <div class="mb-2">
-              <label class="text-xs">Data Final:</label>
-              <input v-model="manualEnd" type="date" class="border px-1 py-0.5 w-full rounded-sm" />
-            </div>
-            <div class="flex justify-end gap-2 mt-2 text-xs">
-              <button @click="showDatePopup = false" class="px-2 py-1 border rounded">Kansela</button>
-              <button @click="applyManualDateFilter" class="px-2 py-1 border bg-blue-600 text-white rounded">Ok</button>
-            </div>
-          </div>
-        </div>
+        <tbody>
+          <tr v-if="filteredData.length === 0">
+          </tr>
+
+          <tr v-for="(r, idx) in filteredData" :key="idx" class="hover:bg-gray-50">
+            <td class="td">{{ r.barcode }}</td>
+            <td class="td">{{ r.name }}</td>
+            <td class="td text-center">{{ r.cashier || '-' }}</td>
+            <td class="td text-right">{{ r.qty_sold }}</td>
+            <td class="td text-center">{{ r.unit || '-' }}</td>
+            <td class="td text-center">{{ r.category || '-' }}</td>
+            <td class="td text-center">{{ r.supplier || '-' }}</td>
+            <td class="td text-right">{{ r.stock }}</td>
+            <td class="td text-right">{{ formatPrice(r.buy_price) }}</td>
+            <td class="td text-right">{{ formatPrice(r.sell_price) }}</td>
+            <td class="td text-right font-semibold">{{ formatPrice(r.total_sales) }}</td>
+            <td class="td text-right">{{ formatPrice(r.margin) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <!-- Footer -->
     <div class="flex justify-between items-center mt-2 text-xs mx-2 pb-2">
       <div>
-        <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
+        <select v-model="perPage" class="border px-2 py-1 rounded-sm text-sm">
           <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
         </select>
       </div>
@@ -271,9 +260,44 @@ const downloadLaporan = () => {
       </div>
     </div>
   </div>
+
+  <!-- 📅 Modal Kalendariu Manual -->
+  <div v-if="showDatePopup" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div class="bg-white p-4 rounded shadow w-[300px]">
+      <h2 class="text-sm font-semibold mb-2">Hili Data Manual</h2>
+      <div class="mb-2">
+        <label class="text-xs">Data Inísiu:</label>
+        <input v-model="manualStart" type="date" class="border px-2 py-1 w-full rounded-sm text-sm" />
+      </div>
+      <div class="mb-2">
+        <label class="text-xs">Data Final:</label>
+        <input v-model="manualEnd" type="date" class="border px-2 py-1 w-full rounded-sm text-sm" />
+      </div>
+      <div class="flex justify-end gap-2 mt-2 text-xs">
+        <button @click="showDatePopup = false" class="px-2 py-1 border rounded">Kansela</button>
+        <button @click="applyManualDateFilter" class="px-2 py-1 border bg-blue-600 text-white rounded">Ok</button>
+      </div>
+    </div>
+  </div>
+
   <FooterActions />
 </template>
 
 <style scoped>
-th, td { font-size: 13px; }
+th,
+td {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+}
+.th {
+  text-align: left;
+  background: #f9fafb;
+  font-weight: 600;
+  white-space: normal;   /* header panjang auto-wrap */
+  word-break: break-word;
+}
+.td {
+  font-size: 13px;
+}
 </style>

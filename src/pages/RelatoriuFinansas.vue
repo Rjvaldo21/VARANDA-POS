@@ -187,80 +187,83 @@ const manualEnd = ref('')
     <!-- Table -->
     <div class="p-2 flex flex-col flex-1 overflow-hidden">
       <div class="flex-1 overflow-auto border border-gray-300">
-        <table class="w-full table-auto border-collapse text-sm">
+        <table class="w-full table-fixed border-collapse text-sm">
           <thead class="bg-gradient-to-b from-white to-gray-100">
             <!-- Header -->
             <tr>
-              <th class="border px-2 py-1 w-36 text-left">Data</th>
-              <th class="border px-2 py-1 w-24">Tipu</th>
-              <th class="border px-2 py-1 w-32">Numeru</th>
-              <th class="border px-2 py-1 w-28">Banku</th>
-              <th class="border px-2 py-1 w-24">Komputador</th>
-              <th class="border px-2 py-1 w-28">Uzuariu</th>
-              <th class="border px-2 py-1 w-[120px]">Detalle</th>
-              <th class="border px-2 py-1 w-[500px] text-center">Total</th>
+              <th class="th w-48 text-left">Data</th>
+              <th class="th w-32 text-left">Tipu</th>
+              <th class="th w-32 text-left">Numeru</th>
+              <th class="th w-28 text-left">Banku</th>
+              <th class="th w-28 text-left">Komputador</th>
+              <th class="th w-32 text-left">Uzuariu</th>
+              <th class="th w-[140px] text-left">Detalle</th>
+              <th class="th w-[500px] text-right">Total</th>
             </tr>
 
             <!-- Filter -->
             <tr>
-              <th class="border px-2 py-1 align-top">
-                <div class="flex flex-col gap-1 min-w-[220px]">
-                  <select @change="handleFilterChange($event)" class="border px-2 py-1 text-sm rounded-sm">
+              <!-- Data -->
+              <th class="th align-top">
+                <div class="flex flex-col gap-1 w-full">
+                  <select @change="handleFilterChange($event)" class="border px-2 py-1 text-sm rounded-sm w-full">
                     <option :value="'today'">📅 {{ todayFormatted }}</option>
                     <option value="">🗓️ Hili kalendariu</option>
                   </select>
                 </div>
               </th>
-              <th class="border px-2 py-1">
-                <select v-model="filter.tipe" class="border px-1 py-0.5 rounded-sm w-full">
+
+              <!-- Tipu -->
+              <th class="th">
+                <select v-model="filter.tipe" class="border px-2 py-1 rounded-sm w-full text-sm">
                   <option value="">Kompletu</option>
                   <option value="masuk">Tama</option>
                   <option value="keluar">Sai</option>
                 </select>
               </th>
-              <th class="border px-2 py-1">
-                <input v-model="filter.nomor" placeholder="Numeru" class="border px-1 py-0.5 rounded-sm w-full" />
+
+              <th class="th">
+                <input v-model="filter.nomor" placeholder="Numeru" class="border px-2 py-1 rounded-sm w-full text-sm" />
               </th>
-              <th class="border px-2 py-1">
-                <select v-model="filter.banku" class="border px-1 py-0.5 rounded-sm w-full">
+
+              <th class="th">
+                <select v-model="filter.banku" class="border px-2 py-1 rounded-sm w-full text-sm">
                   <option value="">Kompletu</option>
                   <option value="BNCTL">BNCTL</option>
                   <option value="MANDIRI">MANDIRI</option>
                   <option value="BNU">BNU</option>
                 </select>
               </th>
-              <th class="border px-2 py-1">
-                <input v-model="filter.mesin" placeholder="Komputador" class="border px-1 py-0.5 rounded-sm w-full" />
+
+              <th class="th">
+                <input v-model="filter.mesin" placeholder="Komputador" class="border px-2 py-1 rounded-sm w-full text-sm" />
               </th>
-              <th class="border px-2 py-1">
-                <input v-model="filter.pengguna" placeholder="Uzuariu" class="border px-1 py-0.5 rounded-sm w-full" />
+
+              <th class="th">
+                <input v-model="filter.pengguna" placeholder="Uzuariu" class="border px-2 py-1 rounded-sm w-full text-sm" />
               </th>
-              <th class="border px-2 py-1 w-[120px]">
-                <input v-model="filter.detil" placeholder="Detalle" class="border px-1 py-0.5 rounded-sm w-full" />
+
+              <th class="th">
+                <input v-model="filter.detil" placeholder="Detalle" class="border px-2 py-1 rounded-sm w-full text-sm" />
               </th>
-              <th class="border px-2 py-1 text-center text-gray-400">Otomatika</th>
+
+              <th class="th text-center text-gray-400">Otomatika</th>
             </tr>
           </thead>
 
           <tbody>
             <tr v-if="filteredRows.length === 0">
-              <td colspan="8" class="py-4 italic text-center text-gray-500">
-                <!-- Tidak ada data -->
-              </td>
             </tr>
 
             <tr v-for="(r, i) in filteredRows" :key="i" class="hover:bg-gray-50">
-              <td class="border px-2 py-1">{{ r.entry_date }}</td>
-              <td class="border px-2 py-1">{{ r.entry_type }}</td>
-              <td class="border px-2 py-1">{{ r.number || '' }}</td>
-              <td class="border px-2 py-1">—</td> 
-              <td class="border px-2 py-1">—</td> 
-              <td class="border px-2 py-1">—</td>
-              <td class="border px-2 py-1">{{ r.note || '-' }}</td>
-              <td
-                class="border px-2 py-1 text-right"
-                :class="Number(r.amount_signed) >= 0 ? 'text-green-600' : 'text-red-600'"
-              >
+              <td class="td">{{ r.entry_date }}</td>
+              <td class="td">{{ r.entry_type }}</td>
+              <td class="td">{{ r.number || '' }}</td>
+              <td class="td">—</td>
+              <td class="td">—</td>
+              <td class="td">—</td>
+              <td class="td">{{ r.note || '-' }}</td>
+              <td class="td text-right" :class="Number(r.amount_signed) >= 0 ? 'text-green-600' : 'text-red-600'">
                 {{ formatPrice(r.amount_signed) }}
               </td>
             </tr>
@@ -319,5 +322,22 @@ const manualEnd = ref('')
   padding: 8px;
   text-align: center;
   font-weight: 600;
+}
+
+th,
+td {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+}
+.th {
+  text-align: left;
+  background: #f9fafb;
+  font-weight: bold;
+  white-space: normal;
+  word-break: break-word;
+}
+.td {
+  font-size: 13px;
 }
 </style>

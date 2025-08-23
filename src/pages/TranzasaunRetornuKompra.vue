@@ -186,19 +186,19 @@ const pricePerItem = (refunded_amount, qty) => {
 
       <!-- Table -->
         <div class="flex-1 border border-gray-300 rounded-sm overflow-x-auto scrollbar-stable">
-          <table class="w-auto max-w-none min-w-[1100px] xl:min-w-0 border-collapse text-sm table-fixed">
+          <table class="w-auto max-w-none min-w-[1200px] lg:min-w-[1400px] border-collapse text-sm table-fixed">
             <colgroup>
-              <col style="width:9%"  />  
-              <col style="width:10%" />  
-              <col style="width:16%" />  
-              <col style="width:14%" />  
-              <col style="width:9%"  />  
-              <col style="width:7%"  />  
-              <col style="width:12%" />  
-              <col style="width:9%"  />  
-              <col style="width:7%"  />  
-              <col style="width:12%" />  
-              <col style="width:5%"  />
+              <col style="width:7.5rem" />  
+              <col style="width:12rem" />   
+              <col style="width:18rem" />   
+              <col style="width:14rem" />   
+              <col style="width:10rem" />   
+              <col style="width:7rem"  />   
+              <col style="width:11rem" />   
+              <col style="width:9rem"  />   
+              <col style="width:9rem"  />   
+              <col style="width:11rem" />   
+              <col style="width:16rem" />   
             </colgroup>
 
             <thead class="bg-gradient-to-b from-white to-gray-100">
@@ -217,6 +217,7 @@ const pricePerItem = (refunded_amount, qty) => {
               </tr>
 
               <tr>
+                <!-- Data -->
                 <th class="th">
                   <div class="flex items-center gap-2">
                     <div class="border rounded-sm px-2 py-1 w-44">
@@ -229,23 +230,31 @@ const pricePerItem = (refunded_amount, qty) => {
                     </div>
                   </div>
                 </th>
+
+                <!-- Barcode / SKU -->
                 <th class="th">
                   <input v-model="filter.barcode" type="text" placeholder="Barcode/SKU" class="f-input" />
                 </th>
+
+                <!-- Naran -->
                 <th class="th">
                   <input v-model="filter.nama" type="text" placeholder="Naran" class="f-input" />
                 </th>
+
+                <!-- Fornesedor -->
                 <th class="th">
                   <input v-model="filter.supplier" type="text" placeholder="Fornesedor" class="f-input" />
                 </th>
+
                 <th class="th">
-                  <select v-model="filter.status" class="f-input">
+                  <select v-model="filter.status" class="f-input f-select">
                     <option value="">Status</option>
                     <option value="Approved">Aprova</option>
                     <option value="Pending">Pendente</option>
                     <option value="Rejected">Rejeitadu</option>
                   </select>
                 </th>
+
                 <th class="th"></th>
                 <th class="th"></th>
                 <th class="th"></th>
@@ -322,8 +331,8 @@ table { border-collapse: collapse; table-layout: fixed; }
   overflow: hidden;
   text-overflow: ellipsis;
   vertical-align: middle;
-  padding: 0.25rem 0.5rem;   
-  border: 1px solid #e5e7eb; 
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #e5e7eb;
 }
 
 .td-num { text-align: right; font-variant-numeric: tabular-nums; }
@@ -337,5 +346,8 @@ table { border-collapse: collapse; table-layout: fixed; }
   line-height: 1.25rem;
   background: #fff;
 }
+
+.f-select { min-width: 9.5rem; }
+
 
 </style>

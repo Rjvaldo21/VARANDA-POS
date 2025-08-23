@@ -196,7 +196,7 @@ const totalMargin = computed(() =>
 
 
 <template>
-  <div class="bg-white border border-gray-50 rounded-sm shadow text-sm flex flex-col h-full">
+  <div class="bg-white border border-gray-200 rounded-sm shadow text-sm flex flex-col h-full">
     <!-- Header -->
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
@@ -209,75 +209,51 @@ const totalMargin = computed(() =>
 
     <!-- Summary -->
     <div class="flex gap-4 px-2 pt-3">
-  <div class="border rounded-sm px-3 py-2 w-40 text-right">
-    <div class="text-xs text-gray-500 text-left">Total Fa'an</div>
-    <div class="text-lg font-bold">{{ formatUSD(totalPenjualanAPI) }}</div>
-  </div>
-  <div class="border rounded-sm px-3 py-2 w-40 text-right">
-    <div class="text-xs text-gray-500 text-left">Marjen</div>
-    <div class="text-lg font-bold">{{ formatUSD(totalMarginAPI) }}</div>
-  </div>
-</div>
+      <div class="border rounded-sm px-3 py-2 w-40 text-right">
+        <div class="text-xs text-gray-500 text-left">Total Fa'an</div>
+        <div class="text-lg font-bold">{{ formatUSD(totalPenjualanAPI) }}</div>
+      </div>
+      <div class="border rounded-sm px-3 py-2 w-40 text-right">
+        <div class="text-xs text-gray-500 text-left">Marjen</div>
+        <div class="text-lg font-bold">{{ formatUSD(totalMarginAPI) }}</div>
+      </div>
+    </div>
 
     <!-- Table -->
     <div class="flex-1 overflow-auto border border-gray-300 mx-2 mt-2">
-      <table class="w-full table-auto border-collapse text-sm">
+      <table class="w-full table-fixed border-collapse text-sm">
         <thead class="bg-gradient-to-b from-white to-gray-100">
           <tr>
-            <th class="border px-2 py-1 w-56 align-top">
-              <select @change="handleFilterChange($event)" class="border px-2 py-1 text-sm rounded-sm w-full">
+            <th class="th w-56">
+              <select @change="handleFilterChange($event)" class="f-input">
                 <option :value="'today'">📅 {{ todayFormatted }}</option>
                 <option value="">🗓️ Hili kalendariu</option>
               </select>
             </th>
-
-            <th class="border px-2 py-1 w-32">
-              <input v-model="filter.barcode" type="text" placeholder="Barcode"
-                class="border px-1 py-0.5 rounded-sm w-full" />
+            <th class="th w-32">
+              <input v-model="filter.barcode" type="text" placeholder="Barcode" class="f-input" />
             </th>
-            <th class="border px-2 py-1 w-48">
-              <input v-model="filter.nama" type="text" placeholder="Naran"
-                class="border px-1 py-0.5 rounded-sm w-full" />
+            <th class="th w-48">
+              <input v-model="filter.nama" type="text" placeholder="Naran" class="f-input" />
             </th>
-            <th class="border px-2 py-1 text-right w-16">Qty</th>
-            <th class="border px-2 py-1 text-right w-20">Unidade</th>
-            <th class="border px-2 py-1 text-right w-24">Total</th>
-            <th class="border px-2 py-1 text-right w-24">Presu Kompra</th>
-            <th class="border px-2 py-1 text-right w-24">Margin</th>
+            <th class="th w-16 text-right">Qty</th>
+            <th class="th w-20 text-right">Unidade</th>
+            <th class="th w-24 text-right">Total</th>
+            <th class="th w-28 text-right whitespace-normal break-words">Presu Kompra</th>
+            <th class="th w-24 text-right">Margin</th>
           </tr>
         </thead>
 
-        <!-- 📅 Modal Kalendariu Manual -->
-          <div v-if="showDatePopup" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div class="bg-white p-4 rounded shadow w-[300px]">
-              <h2 class="text-sm font-semibold mb-2">Hili Data Manual</h2>
-              <div class="mb-2">
-                <label class="text-xs">Data Inísiu:</label>
-                <input v-model="manualStart" type="datetime-local" class="border px-1 py-0.5 w-full rounded-sm" />
-              </div>
-              <div class="mb-2">
-                <label class="text-xs">Data Final:</label>
-                <input v-model="manualEnd" type="datetime-local" class="border px-1 py-0.5 w-full rounded-sm" />
-              </div>
-              <div class="flex justify-end gap-2 mt-2 text-xs">
-                <button @click="showDatePopup = false" class="px-2 py-1 border rounded hover:bg-gray-100">Kansela</button>
-                <button @click="applyManualDateFilter" class="px-2 py-1 border bg-blue-600 text-white rounded hover:bg-blue-700">
-                  Ok
-                </button>
-              </div>
-            </div>
-          </div>
-
         <tbody>
           <tr v-for="item in filteredData" :key="item.id" class="hover:bg-gray-50">
-            <td class="border px-2 py-1">{{ item.tanggal }}</td>
-            <td class="border px-2 py-1">{{ item.barcode }}</td>
-            <td class="border px-2 py-1">{{ item.nama }}</td>
-            <td class="border px-2 py-1 text-right">{{ item.qty }}</td>
-            <td class="border px-2 py-1 text-right">{{ item.satuan }}</td>
-            <td class="border px-2 py-1 text-right">{{ item.total }}</td>
-            <td class="border px-2 py-1 text-right">{{ item.harga_beli }}</td>
-            <td class="border px-2 py-1 text-right">{{ item.margin }}</td>
+            <td class="td">{{ item.tanggal }}</td>
+            <td class="td">{{ item.barcode }}</td>
+            <td class="td">{{ item.nama }}</td>
+            <td class="td text-right">{{ item.qty }}</td>
+            <td class="td text-right">{{ item.satuan }}</td>
+            <td class="td text-right">{{ item.total }}</td>
+            <td class="td text-right">{{ item.harga_beli }}</td>
+            <td class="td text-right">{{ item.margin }}</td>
           </tr>
         </tbody>
       </table>
@@ -286,7 +262,7 @@ const totalMargin = computed(() =>
     <!-- Footer -->
     <div class="flex justify-between items-center mt-2 text-xs px-2 pb-2">
       <div>
-        <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
+        <select v-model="perPage" class="f-input">
           <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
         </select>
       </div>
@@ -296,15 +272,48 @@ const totalMargin = computed(() =>
       </div>
     </div>
   </div>
+
+  <!-- 📅 Modal Kalendariu Manual -->
+  <div v-if="showDatePopup" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-white p-4 rounded shadow w-[300px]">
+      <h2 class="text-sm font-semibold mb-2">Hili Data Manual</h2>
+      <div class="mb-2">
+        <label class="text-xs">Data Inísiu:</label>
+        <input v-model="manualStart" type="datetime-local" class="f-input" />
+      </div>
+      <div class="mb-2">
+        <label class="text-xs">Data Final:</label>
+        <input v-model="manualEnd" type="datetime-local" class="f-input" />
+      </div>
+      <div class="flex justify-end gap-2 mt-2 text-xs">
+        <button @click="showDatePopup = false" class="px-2 py-1 border rounded hover:bg-gray-100">Kansela</button>
+        <button @click="applyManualDateFilter" class="px-2 py-1 border bg-blue-600 text-white rounded hover:bg-blue-700">Ok</button>
+      </div>
+    </div>
+  </div>
+
   <FooterActions />
 </template>
 
 
 <style scoped>
-table {
-  border-collapse: collapse;
+th,
+td {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
 }
-th, td {
+
+.th {
+  text-align: left;
+  background: #f9fafb;
+  font-weight: 600;
+  white-space: normal; 
+  word-break: break-word;
+}
+
+.td {
   font-size: 13px;
 }
 </style>
+

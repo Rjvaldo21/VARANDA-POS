@@ -454,119 +454,88 @@ const deleteItem = () => console.log('Hapus retur')
         </div>
 
         <!-- Popup pilih rentang tanggal -->
-          <div v-if="showDatePopup" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-            <div class="bg-white rounded shadow p-4 w-full max-w-md">
-              <div class="text-base font-semibold mb-3">Hili rentang data</div>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="text-xs text-gray-600">Desde (YYYY-MM-DD)</label>
-                  <input type="date" v-model="manualStart" class="w-full border rounded px-2 py-1" />
-                </div>
-                <div>
-                  <label class="text-xs text-gray-600">To’o (YYYY-MM-DD)</label>
-                  <input type="date" v-model="manualEnd" class="w-full border rounded px-2 py-1" />
-                </div>
+      <div
+        v-if="showDatePopup"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        role="dialog" aria-modal="true"
+        @keydown.esc="showDatePopup=false"
+        @click.self="showDatePopup=false"
+      >
+        <div class="bg-white w-full max-w-md rounded-lg shadow-lg">
+          <div class="flex items-center justify-between px-4 py-3 border-b">
+            <h2 class="text-base font-semibold">Hili rentang data</h2>
+            <button class="text-gray-500 hover:text-gray-700" @click="showDatePopup=false">✖</button>
+          </div>
+
+          <div class="p-4 space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="label">Desde</label>
+                <input type="date" v-model="manualStart" class="input" />
               </div>
-              <div class="mt-4 flex justify-end gap-2">
-                <button class="px-3 py-1 rounded border hover:bg-gray-50" @click="showDatePopup=false">Kansela</button>
-                <button class="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700" @click="applyManualRange">Aplika</button>
+              <div>
+                <label class="label">To’o</label>
+                <input type="date" v-model="manualEnd" class="input" />
               </div>
             </div>
           </div>
+
+          <div class="px-4 py-3 border-t flex justify-end gap-2">
+            <button class="btn" @click="showDatePopup=false">Kansela</button>
+            <button class="btn-primary" @click="applyManualRange">Aplika</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Footer -->
-      <div class="flex justify-between items-center mt-2 text-xs">
-        <div>
-          <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
-            <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
-          </select>
-        </div>
-        <div class="space-x-2 text-base">
-          <button @click="refresh" class="hover:text-blue-600 hover:cursor-pointer">🔄</button>
-          <button @click="addItem" class="hover:text-green-600 hover:cursor-pointer">➕</button>
-          <button @click="editItem" class="hover:text-gray-600 hover:cursor-pointer">✏️</button>
-          <button @click="deleteItem" class="hover:text-red-600 hover:cursor-pointer">❌</button>
-        </div>
-      </div>
-
-      <!-- ✅ Modal form -->
-      <div v-if="showForm" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white w-full max-w-2xl p-4 rounded shadow relative">
-          <h1 class="text-lg font-bold mb-4">🧾 Retornu Fa’an</h1>
-          <button @click="closeForm" class="absolute top-2 right-2 text-gray-600 hover:text-black">✖</button>
-
-          <div class="grid grid-cols-1 gap-4">
-            <div>
-              <label class="font-medium">Transaction *</label>
-              <select v-model="form.transaction_id" class="input">
-                <option value="">-- Pilih Transaction --</option>
-                <option v-for="t in transactions" :key="t.id" :value="t.id">
-                  Invoice #{{ t.invoice_number || t.invoice_id || '—' }} - ${{ formatPrice(t.total) || '0.00' }}
-                </option>
-              </select>
-            </div>
-
-            <div v-if="selectedTransactionSummary" class="mt-2 text-sm bg-gray-50 border rounded px-2 py-1">
-              <p><strong>🧾 Invoice:</strong> {{ selectedTransactionSummary.invoice_id }}</p>
-              <p><strong>💰 Total:</strong> {{ formatPrice(selectedTransactionSummary.total) }}</p>
-              <p><strong>💵 Sudah Dibayar:</strong> {{ formatPrice(selectedTransactionSummary.amount_paid) }}</p>
-              <p><strong>📌 Hutang Awal:</strong> {{ formatPrice(selectedTransactionSummary.amount_due) }}</p>
-              <p><strong>🔁 Total Retur:</strong> {{ formatPrice(selectedTransactionSummary.total_refunded) }}</p>
-              <p><strong>💼 Sisa Hutang Setelah Retur:</strong> {{ formatPrice(selectedTransactionSummary.remaining_due) }}</p>
-              <p v-if="selectedTransactionSummary.refund_excess > 0" class="text-red-600">
-                <strong>🎁 Uang Kembali:</strong> {{ formatPrice(selectedTransactionSummary.refund_excess) }}
-              </p>
-            </div>
-
-            <div>
-              <label class="font-medium">Product *</label>
-              <select v-model="form.product_id" class="input">
-                <option value="">-- Pilih Produk --</option>
-                <option v-for="p in products" :key="p.id" :value="p.id">
-                  {{ p.name }} ({{ p.barcode }})
-                </option>
-              </select>
-            </div>
-
-            <div>
-              <label class="font-medium">Quantity *</label>
-              <input type="number" v-model="form.quantity" class="input" min="1" />
-            </div>
-
-            <div>
-              <label class="font-medium">Refunded Amount *</label>
-              <input type="number" v-model="form.refunded_amount" class="input" step="0.01" />
-            </div>
-
-            <div>
-              <label class="font-medium">Reason</label>
-              <textarea v-model="form.reason" class="input"></textarea>
-            </div>
-
-            <div>
-              <label class="font-medium">Status *</label>
-              <select v-model="form.status" class="input">
-                <option value="">-- Pilih Status --</option>
-                <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="font-medium">User *</label>
-              <select v-model="form.user" class="input">
-                <option value="">-- Pilih User --</option>
-                <option v-for="u in users" :key="u.id" :value="u.id">{{ u.username }}</option>
-              </select>
-            </div>
+      <div class="flex justify-between items-center mt-2 text-xs relative z-10">
+          <div>
+            <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
+              <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
+            </select>
           </div>
 
-          <div class="mt-6 text-right">
-            <button @click="handleSubmit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-              💾 Submit
-            </button>
+          <div class="space-x-2 text-base" @submit.prevent>
+            <button type="button" @click.stop.prevent="refresh()"   class="hover:text-blue-600 hover:cursor-pointer" aria-label="Refresh">🔄</button>
+            <button type="button" @click.stop.prevent="addItem()"   class="hover:text-green-600 hover:cursor-pointer" aria-label="Tambah">➕</button>
+            <button type="button" @click.stop.prevent="editItem()"  class="hover:text-gray-600 hover:cursor-pointer" aria-label="Edit">✏️</button>
+            <button type="button" @click.stop.prevent="deleteItem()" class="hover:text-red-600 hover:cursor-pointer" aria-label="Hapus">❌</button>
           </div>
         </div>
-      </div>
+
+      <!-- Popup pilih rentang tanggal -->
+        <div
+          v-if="showDatePopup"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog" aria-modal="true"
+          @keydown.esc="showDatePopup=false"
+          @click.self="showDatePopup=false"
+        >
+          <div class="bg-white w-full max-w-md rounded-lg shadow-lg">
+            <div class="flex items-center justify-between px-4 py-3 border-b">
+              <h2 class="text-base font-semibold">Hili rentang data</h2>
+              <button type="button" class="text-gray-500 hover:text-gray-700" @click="showDatePopup=false">✖</button>
+            </div>
+
+            <div class="p-4 space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="label">Desde</label>
+                  <input type="date" v-model="manualStart" class="input" />
+                </div>
+                <div>
+                  <label class="label">To’o</label>
+                  <input type="date" v-model="manualEnd" class="input" />
+                </div>
+              </div>
+            </div>
+
+            <div class="px-4 py-3 border-t flex justify-end gap-2">
+              <button type="button" class="btn" @click="showDatePopup=false">Kansela</button>
+              <button type="button" class="btn-primary" @click="applyManualRange">Aplika</button>
+            </div>
+          </div>
+        </div>
     </div>
   </div>
   <FooterActions />
@@ -598,5 +567,63 @@ table { border-collapse: collapse; table-layout: fixed; }
   line-height: 1.25rem;
   background: white;
 }
+
+table { border-collapse: collapse; table-layout: fixed; }
+
+.th, .td {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  padding: 0.375rem 0.5rem; /* 6px 8px */
+  border: 1px solid #e5e7eb;
+}
+
+.td-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* form primitives */
+.input {
+  width: 100%;
+  height: 2.25rem;              /* h-9 */
+  padding: 0.375rem 0.5rem;     /* px-2 py-1 */
+  font-size: 0.875rem;          /* text-sm */
+  line-height: 1.25rem;
+  border: 1px solid #d1d5db;    /* border-gray-300 */
+  border-radius: 0.375rem;      /* rounded-md */
+  background: #fff;
+  outline: none;
+}
+.input:focus {
+  border-color: #2563eb;        /* blue-600 */
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, .15);
+}
+
+.label {
+  display: block;
+  font-size: 0.75rem;           /* text-xs */
+  color: #4b5563;               /* gray-600 */
+  margin-bottom: 0.25rem;       /* mb-1 */
+}
+
+/* buttons */
+.btn {
+  padding: 0.375rem 0.75rem;    /* px-3 py-1.5 */
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  background: #fff;
+  font-size: 0.875rem;
+}
+.btn:hover { background: #f9fafb; }
+
+.btn-primary {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+  background: #2563eb;          /* blue-600 */
+  color: #fff;
+  font-size: 0.875rem;
+  border: 1px solid #2563eb;
+}
+.btn-primary:hover { background: #1d4ed8; } /* blue-700 */
 
 </style>
