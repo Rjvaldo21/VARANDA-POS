@@ -73,8 +73,7 @@ const manualStart = ref('')
 const manualEnd   = ref('')
 
 const openCalendarFor = (field) => {
-  activeDateField.value = field // 'return' | 'trans'
-  // ambil rentang terakhir utk field ini
+  activeDateField.value = field 
   const r = field === 'return' ? rangeReturn.value : rangeTrans.value
   manualStart.value = r.start || (field === 'return' ? filter.value.tanggal : filter.value.tanggalTransaksi) || ''
   manualEnd.value   = r.end   || manualStart.value || ''
@@ -105,9 +104,8 @@ const handleFilterChangeFor = (field, ev) => {
     return
   }
   if (v === 'week') {
-    // minggu berjalan: senin–hari ini
     const d = new Date()
-    const day = d.getDay() || 7 // Minggu=0 → 7
+    const day = d.getDay() || 7 
     const monday = new Date(d); monday.setDate(d.getDate() - (day - 1))
     start = fmtDate(monday); end = fmtDate(today)
   }
@@ -117,11 +115,11 @@ const handleFilterChangeFor = (field, ev) => {
     start = fmtDate(first); end = fmtDate(today)
   }
   if (v === '') {
-    // pilih di kalender (popup)
+    
     openCalendarFor(field === 'return' ? 'return' : 'trans')
     return
   }
-  // set ke rentang
+  
   if (field === 'return') {
     rangeReturn.value = { start, end }
     filter.value.tanggal = ''
@@ -131,7 +129,6 @@ const handleFilterChangeFor = (field, ev) => {
   }
 }
 
-// helper banding tanggal yyyy-mm-dd
 const inRange = (dateStr, start, end) => {
   if (!dateStr) return false
   if (!start && !end) return true
@@ -147,7 +144,6 @@ const applyManualRange = () => {
   }
   const target = activeDateField.value === 'return' ? rangeReturn : rangeTrans
   target.value = { start: manualStart.value, end: manualEnd.value }
-  // kosongkan filter single-date agar pakai rentang
   if (activeDateField.value === 'return') {
     filter.value.tanggal = ''
   } else {
@@ -350,21 +346,21 @@ const deleteItem = () => console.log('Hapus retur')
 
       <!-- Table -->
         <div class="flex-1 border border-gray-300 rounded-sm overflow-x-auto">
-          <table class="w-auto max-w-none min-w-[1100px] lg:min-w-[1300px] xl:min-w-0 border-collapse text-sm table-fixed">
+          <table class="w-auto max-w-none min-w-[1200px] lg:min-w-[1400px] xl:min-w-0 border-collapse text-sm table-fixed">
             <colgroup>
               <col style="width:7.5rem" />  
               <col style="width:9rem"  />   
               <col style="width:8rem"  />   
-              <col style="width:16rem" />   
+              <col style="width:20rem" />   
               <col style="width:13rem" />   
               <col style="width:9rem"  />   
+              <col style="width:10rem" />   
               <col style="width:8rem"  />   
-              <col style="width:6rem"  />   
               <col style="width:9rem"  />   
               <col style="width:9rem"  />   
               <col style="width:7rem"  />   
               <col style="width:10rem" />   
-              <col style="width:16rem" />   
+              <col style="width:16rem" />
             </colgroup>
 
             <thead class="bg-gradient-to-b from-white to-gray-100">
@@ -376,7 +372,7 @@ const deleteItem = () => console.log('Hapus retur')
                 <th class="th">Numeru Tranzasaun</th>
                 <th class="th">Data Tranzasaun</th>
                 <th class="th">Status</th>
-                <th class="th text-center">Qty</th>
+                <th class="th td-num">Qty</th>
                 <th class="th text-right">Total</th>
                 <th class="th">Data Fila</th>
                 <th class="th text-center">Qty Fila</th>
@@ -420,7 +416,8 @@ const deleteItem = () => console.log('Hapus retur')
                     </div>
                   </th>
                 <th class="th">
-                  <select v-model="filter.status" class="f-input">
+                  <select v-model="filter.status" class="f-input f-select">
+
                     <option value="">Status</option>
                     <option value="approved">Aprova</option>
                     <option value="pending">Pendente</option>
@@ -587,6 +584,8 @@ table { border-collapse: collapse; table-layout: fixed; }
   padding: 0.25rem 0.5rem;  
   border: 1px solid #e5e7eb;
 }
+
+.f-select { min-width: 9.5rem; }
 
 .td-num { text-align: right; font-variant-numeric: tabular-nums; }
 

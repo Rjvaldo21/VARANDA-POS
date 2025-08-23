@@ -13,11 +13,22 @@ const store = ref({
 })
 
 const users = ref([])
-const filter = ref({ username: '', name: '', email: '' })
+// const filter = ref({ username: '', name: '', email: '' })
 const perPage = ref(10)
 const selectedUser = ref(null)
 const isLoading = ref(true)
 
+
+const filter = ref({
+  nomor: '',
+  supplier: '',
+  tipe: 'all',     
+  status: 'all',   
+  tanggalAwal: '',
+  tanggalAkhir: '',
+  jatuhTempoAwal: '',
+  jatuhTempoAkhir: '',
+})
 
 const showUserModal = ref(false)
 const modalMode = ref('add') 
@@ -46,11 +57,32 @@ const fetchUsers = async () => {
   }
 }
 
+const filteredPurchases = computed(() =>
+  purchases.value.filter(p => {
+    const tipeOk   = filter.value.tipe === 'all'   || p.payment_type === filter.value.tipe
+    const statusOk = filter.value.status === 'all' || p.status === filter.value.status
+    const nomorOk  = !filter.value.nomor    || (p.invoice_number || '').toLowerCase().includes(filter.value.nomor.toLowerCase())
+    const supOk    = !filter.value.supplier || (p.supplier?.name || '').toLowerCase().includes(filter.value.supplier.toLowerCase())
+
+    const inRange = (s, a, b) => {
+      if (!a && !b) return true
+      if (!s) return false
+      const d = String(s).slice(0,10)
+      return (!a || d >= a) && (!b || d <= b)
+    }
+    const tglOk  = inRange(p.date,     filter.value.tanggalAwal,      filter.value.tanggalAkhir)
+    const dueOk  = inRange(p.due_date, filter.value.jatuhTempoAwal,   filter.value.jatuhTempoAkhir)
+
+    return tipeOk && statusOk && nomorOk && supOk && tglOk && dueOk
+  })
+)
+
+
 const todayFormatted = new Date().toLocaleDateString('en-GB')
 
 
 const showDatePopup = ref(false)
-const datePickerMode = ref('date') // 'date' | 'due'
+const datePickerMode = ref('date')
 const manualStart = ref('')
 const manualEnd = ref('')
 const toDateOnly = s => (s ? String(s).slice(0,10) : '')
@@ -278,72 +310,90 @@ const lockUser = async () => {
       </div>
 
       <!-- Table -->
-      <div class="flex-1 overflow-auto border border-gray-300 rounded-sm">
-        <table class="w-full min-w-[900px] border-collapse text-sm table-fixed">
-        <thead class="bg-gradient-to-b from-white to-gray-100">
-            <!-- Baris Judul Kolom -->
+      <div class="flex-1 border border-gray-300 rounded-sm overflow-x-auto">
+        <table class="w-max lg:w-full min-w-[1100px] lg:min-w-[1300px] border-collapse text-sm table-fixed">
+          <colgroup>
+            <col style="width:9rem"  />  
+            <col style="width:12rem" /> 
+            <col style="width:16rem" />  
+            <col style="width:9rem"  /> 
+            <col style="width:10rem" />  
+            <col style="width:10rem" />  
+            <col style="width:10rem" />  
+            <col style="width:10rem" />  
+            <col style="width:10rem" />  
+            <col style="width:11rem" />  
+          </colgroup>
+
+          <thead class="bg-gradient-to-b from-white to-gray-100">
             <tr>
-            <th class="border px-2 py-1">Data</th>
-            <th class="border px-2 py-1">Numeru</th>
-            <th class="border px-2 py-1">Fornesedór</th>
-            <th class="border px-2 py-1">Tipu</th>
-            <th class="border px-2 py-1">Data Remata</th>
-            <th class="border px-2 py-1">Status</th>
-            <th class="border px-2 py-1">Subtotal</th>
-            <th class="border px-2 py-1">Disc. Form</th>
-            <th class="border px-2 py-1">Diskontu</th>
-            <th class="border px-2 py-1">Total</th>
+              <th class="th text-left">Data</th>
+              <th class="th text-left">Numeru</th>
+              <th class="th text-left">Fornesedór</th>
+              <th class="th text-left">Tipu</th>
+              <th class="th text-left">Data Remata</th>
+              <th class="th text-left">Status</th>
+              <th class="th text-right">Subtotal</th>
+              <th class="th text-right">Disc. Form</th>
+              <th class="th text-right">Diskontu</th>
+              <th class="th text-right">Total</th>
             </tr>
+
             <!-- Baris Filter -->
             <tr>
-            <th class="border px-2 py-1 w-56 align-top">
-              <select @change="handleFilterChange($event)" class="border px-2 py-1 text-sm rounded-sm w-full">
-                <option :value="'today'">📅 {{ todayFormatted }}</option>
-                <option value="">🗓️ Hili kalendariu</option>
-              </select>
-            </th>
-            <th class="border px-2 py-1"><input v-model="filter.nomor" type="text" placeholder="Numeru" class="w-full px-1 py-0.5 rounded-sm" /></th>
-            <th class="border px-2 py-1"><input v-model="filter.supplier" type="text" placeholder="Fornesedór" class="w-full px-1 py-0.5 rounded-sm" /></th>
-            <th class="border px-2 py-1">
-                <select v-model="filter.tipe" class="w-full px-1 py-0.5 rounded-sm">
-                <option value="">Kompletu</option>
-                <option value="tunai">Cash</option>
-                <option value="kredit">Kreditu</option>
+              <th class="th">
+                <select @change="handleFilterChange($event)" class="f-input">
+                  <option :value="'today'">📅 {{ todayFormatted }}</option>
+                  <option value="">🗓️ Hili kalendariu</option>
                 </select>
-            </th>
-            <th class="border px-2 py-1 w-56 align-top">
-              <select @change="handleFilterChange($event)" class="border px-2 py-1 text-sm rounded-sm w-full">
-                <option :value="'today'">📅 {{ todayFormatted }}</option>
-                <option value="">🗓️ Hili kalendariu</option>
-              </select>
-            </th>
-            <th class="border px-2 py-1">
-                <select v-model="filter.status" class="w-full px-1 py-0.5 rounded-sm">
-                <option value="">Semua</option>
-                <option value="lunas">Lunas</option>
-                <option value="belum_lunas">Belum Lunas</option>
+              </th>
+              <th class="th">
+                <input v-model="filter.nomor" type="text" placeholder="Numeru" class="f-input" />
+              </th>
+              <th class="th">
+                <input v-model="filter.supplier" type="text" placeholder="Fornesedór" class="f-input" />
+              </th>
+              <th class="th">
+                <select v-model="filter.tipe" class="f-input">
+                  <option value="">Kompletu</option>
+                  <option value="tunai">Cash</option>
+                  <option value="kredit">Kreditu</option>
                 </select>
-            </th>
-            <th class="border px-2 py-1"></th>
-            <th class="border px-2 py-1"></th>
-            <th class="border px-2 py-1"></th>
-            <th class="border px-2 py-1"></th>
+              </th>
+              <th class="th">
+                <select @change="handleFilterChange($event)" class="f-input">
+                  <option :value="'today'">📅 {{ todayFormatted }}</option>
+                  <option value="">🗓️ Hili kalendariu</option>
+                </select>
+              </th>
+              <th class="th">
+                <select v-model="filter.status" class="f-input">
+                  <option value="all">Kompletu</option>
+                  <option value="lunas">Lunas</option>
+                  <option value="belum_lunas">Belum Lunas</option>
+                </select>
+              </th>
+              <th class="th"></th>
+              <th class="th"></th>
+              <th class="th"></th>
+              <th class="th"></th>
             </tr>
-        </thead>
-        <tbody>
+          </thead>
+
+          <tbody>
             <tr v-for="p in filteredPurchases" :key="p.id" class="hover:bg-gray-50">
-            <td class="border px-2 py-1">{{ formatDate(p.date) }}</td>
-            <td class="border px-2 py-1">{{ p.invoice_number }}</td>
-            <td class="border px-2 py-1">{{ p.supplier?.name }}</td>
-            <td class="border px-2 py-1">{{ p.payment_type }}</td>
-            <td class="border px-2 py-1">{{ formatDate(p.due_date) }}</td>
-            <td class="border px-2 py-1">{{ p.status }}</td>
-            <td class="border px-2 py-1 text-right">{{ formatPrice(p.subtotal) }}</td>
-            <td class="border px-2 py-1 text-right">{{ formatPrice(p.discount_fixed) }}</td>
-            <td class="border px-2 py-1 text-right">{{ formatPrice(p.discount_percent) }}</td>
-            <td class="border px-2 py-1 text-right font-bold">{{ formatPrice(p.total) }}</td>
+              <td class="td">{{ formatDate(p.date) }}</td>
+              <td class="td" :title="p.invoice_number">{{ p.invoice_number }}</td>
+              <td class="td" :title="p.supplier?.name">{{ p.supplier?.name }}</td>
+              <td class="td">{{ p.payment_type }}</td>
+              <td class="td">{{ formatDate(p.due_date) }}</td>
+              <td class="td">{{ p.status }}</td>
+              <td class="td td-num">{{ formatPrice(p.subtotal) }}</td>
+              <td class="td td-num">{{ formatPrice(p.discount_fixed) }}</td>
+              <td class="td td-num">{{ formatPrice(p.discount_percent) }}</td>
+              <td class="td td-num font-bold">{{ formatPrice(p.total) }}</td>
             </tr>
-        </tbody>
+          </tbody>
         </table>
       </div>
 
@@ -468,13 +518,28 @@ const lockUser = async () => {
 </template>
 
 <style scoped>
-table {
-  border-collapse: collapse;
-}
-th, td {
+table { border-collapse: collapse; table-layout: fixed; }
+
+.th, .td {
   font-size: 13px;
+  white-space: nowrap;      
+  overflow: hidden;         
+  text-overflow: ellipsis;  
+  vertical-align: middle;
+  padding: 0.25rem 0.5rem;  
+  border: 1px solid #e5e7eb;
 }
-tr.bg-yellow-100 {
-  background-color: #fef9c3;
+
+.td-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+
+.f-input {
+  width: 100%;
+  padding: 0.25rem 0.375rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background: #fff;
 }
 </style>
