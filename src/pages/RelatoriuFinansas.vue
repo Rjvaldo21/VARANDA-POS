@@ -135,7 +135,7 @@ onMounted(async () => {
 const getLogoUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `${baseURL.replace(\"/api/\", \"\")}${path}`
+  return `${baseURL.replace("/api/", "")}${path}`
 }
 
 defineOptions({ inheritAttrs: false })

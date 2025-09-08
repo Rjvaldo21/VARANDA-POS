@@ -245,7 +245,7 @@ const formattedAddress = computed(() => store.value.address.replace(/\n/g, '<br 
 const getLogoUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `${baseURL.replace(\"/api/\", \"\")}${path}`
+  return `${baseURL.replace("/api/", "")}${path}`
 }
 
 </script>
