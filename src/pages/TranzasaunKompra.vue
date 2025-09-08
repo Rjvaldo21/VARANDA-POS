@@ -13,9 +13,11 @@ const store = ref({
 })
 
 const users = ref([])
+const purchases = ref([])
 // const filter = ref({ username: '', name: '', email: '' })
 const perPage = ref(10)
 const selectedUser = ref(null)
+const selectedTransactionSummary = ref(null)
 const isLoading = ref(true)
 
 
@@ -40,7 +42,17 @@ const formattedAddress = computed(() =>
 
 const getLogoUrl = (path) => {
   if (!path) return ''
-  return path.startsWith('http') ? path : `baseURL.replace("/api/", "")${path}`
+  return path.startsWith('http') ? path : `${baseURL.replace("/api/", "")}${path}`
+}
+
+const formatPrice = (value) => {
+  const number = Number(value)
+  return isNaN(number)
+    ? '$0.00'
+    : new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(number)
 }
 
 const fetchUsers = async () => {
@@ -73,6 +85,13 @@ const filteredPurchases = computed(() =>
 
     return tipeOk && statusOk && nomorOk && supOk && tglOk && dueOk
   })
+)
+
+const totalHutang = computed(() =>
+  filteredPurchases.value.reduce((sum, p) => {
+    const amount = Number(p.amount_due || p.total || 0)
+    return sum + amount
+  }, 0)
 )
 
 
@@ -215,6 +234,15 @@ const lockUser = async () => {
     alert('La konsege dezativa utilizadór')
   }
 }
+
+onMounted(async () => {
+  await Promise.all([
+    fetchStoreProfile(),
+    fetchPurchases(),
+    fetchUsers()
+  ])
+  isLoading.value = false
+})
 </script>
 
 
