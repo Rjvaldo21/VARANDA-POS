@@ -13,6 +13,12 @@ const store = ref({
 
 const formattedAddress = computed(() => store.value.address.replace(/\n/g, '<br />'))
 
+const getLogoUrl = (path) => {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  return `${baseURL.replace("/api/", "")}${path}`
+}
+
 onMounted(async () => {
   try {
     const res = await api.get('store-profile/')
@@ -24,17 +30,7 @@ onMounted(async () => {
     console.error('Gagal fetch store profile:', err)
     console.log('store.logo:', store.value.logo)
   }
-})
-
-const getLogoUrl = (path) => {
-  if (!path) return ''
-  if (path.startsWith('http')) return path
-  return `baseURL.replace("/api/", "")${path}`
-}
-
-onMounted(() => {
-  const token = localStorage.getItem('token')
-  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+  
   fetchProducts()
   fetchAdjustments()
 })
@@ -47,13 +43,6 @@ const formatDate = (datetimeStr) => {
   })
 }
 
-onMounted(() => {
-  const token = localStorage.getItem('token')
-  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-
-  fetchProducts()
-  fetchAdjustments()
-})
 
 const startDate = ref('')
 const endDate   = ref('')
