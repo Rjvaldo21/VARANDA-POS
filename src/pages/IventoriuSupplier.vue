@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const store = ref({
   name: '',
@@ -16,6 +19,7 @@ const filter = ref({ name: '', kode: '', phone: '', email: '' })
 const perPage = ref(10)
 
 const showModal = ref(false)
+const loading = ref(false)
 const selectedSupplier = ref(null)
 const supplierForm = ref({
   name: '',
@@ -24,107 +28,57 @@ const supplierForm = ref({
   address: ''
 })
 
+// Validation states
+const fieldErrors = ref({})
+const fieldValidation = ref({})
+const formErrors = ref([])
+
+const clearValidation = () => {
+  fieldErrors.value = {}
+  fieldValidation.value = {}
+  formErrors.value = []
+}
+
 const addSupplier = () => {
   selectedSupplier.value = null
   supplierForm.value = { name: '', phone: '', email: '', address: '' }
+  clearValidation()
   showModal.value = true
 }
 
-const editSupplier = () => {
-  if (!selectedSupplier.value) {
-    alert('⚠️ Hili fornesédor dulu')
+const editSupplier = (supplier = null) => {
+  const target = supplier || selectedSupplier.value
+  if (!target) {
+    alert('⚠️ Please select a supplier first')
     return
   }
-  supplierForm.value = { ...selectedSupplier.value }
+  selectedSupplier.value = target
+  supplierForm.value = { ...target }
+  clearValidation()
   showModal.value = true
 }
 
-const deleteSupplier = async () => {
-  if (!selectedSupplier.value) {
-    alert('⚠️ Hili fornesédor dulu')
+const deleteSupplier = async (supplier = null) => {
+  const target = supplier || selectedSupplier.value
+  if (!target) {
+    alert('⚠️ Please select a supplier first')
     return
   }
-  const konfirmasi = confirm(`Apaga fornesédor: ${selectedSupplier.value.name}?`)
-  if (!konfirmasi) return
+  if (!confirm(`Delete supplier: ${target.name}?`)) return
 
   try {
     const token = localStorage.getItem('token')
-    await axios.delete(`http://localhost:8000/api/suppliers/${selectedSupplier.value.id}/`, {
+    await api.delete(`suppliers/${target.id}/`, {
       headers: { Authorization: `Bearer ${token}` }
     })
-    await refresh()
     selectedSupplier.value = null
-    alert('🗑️ Fornesédor apaga ho susesu')
-  } catch (error) {
-    console.error('Falha apaga:', error)
-    alert('Erru bainhira apaga fornesédor')
-  }
-}
-
-const saveSupplier = async () => {
-  if (!supplierForm.value.name) {
-    alert('⚠️ Naran fornesédor labele mamuk')
-    return
-  }
-
-  const token = localStorage.getItem('token')
-  try {
-    if (selectedSupplier.value) {
-      await axios.put(`http://localhost:8000/api/suppliers/${selectedSupplier.value.id}/`, supplierForm.value, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-    } else {
-      await axios.post('http://localhost:8000/api/suppliers/', supplierForm.value, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-    }
-
     await refresh()
-    showModal.value = false
-    selectedSupplier.value = null
-    alert('✅ Rai fornesédor ho susesu')
-  } catch (error) {
-    console.error('Gagal simpan:', error)
-    alert('Erro ao rai fornesédor')
-  }
-}
-
-
-const formattedAddress = computed(() =>
-  store.value.address ? store.value.address.replace(/\n/g, '<br />') : ''
-)
-
-const getLogoUrl = (path) => {
-  if (!path) return ''
-  return path.startsWith('http') ? path : `http://localhost:8000${path}`
-}
-
-onMounted(async () => {
-  try {
-    const res = await axios.get('http://localhost:8000/api/store-profile/')
-    if (res.data && res.data.length > 0) {
-      store.value = res.data[0]
-    }
+    alert('✅ Supplier deleted successfully')
   } catch (err) {
-    console.error('Gagal fetch store profile:', err)
+    console.error('❌ Failed to delete supplier:', err)
+    alert('Error occurred while deleting supplier')
   }
-
-  try {
-    const token = localStorage.getItem('token')
-    const response = await axios.get('http://localhost:8000/api/suppliers/', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
-
-    suppliers.value = response.data.map((s, index) => ({
-      ...s,
-      kode: s.kode || `SUP-${index + 1}`
-    }))
-  } catch (error) {
-    console.error('Gagal fetch suppliers:', error)
-  }
-})
+}
 
 const filteredSuppliers = computed(() => {
   return suppliers.value.filter(s =>
@@ -135,13 +89,54 @@ const filteredSuppliers = computed(() => {
   )
 })
 
+const saveSupplier = async () => {
+  // Validation
+  if (!supplierForm.value.name) {
+    alert('Please fill supplier name.')
+    return
+  }
+
+  try {
+    loading.value = true
+    const token = localStorage.getItem('token')
+    
+    if (selectedSupplier.value) {
+      // Edit existing supplier
+      await api.put(`suppliers/${selectedSupplier.value.id}/`, supplierForm.value, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      alert('✅ Supplier updated successfully')
+    } else {
+      // Add new supplier
+      await api.post('suppliers/', supplierForm.value, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      alert('✅ Supplier added successfully')
+    }
+    showModal.value = false
+    await refresh()
+  } catch (err) {
+    console.error('❌ Failed to save supplier:', err)
+    if (err.response && err.response.data) {
+      alert('Failed to save supplier:\n' + JSON.stringify(err.response.data, null, 2))
+    } else {
+      alert('Failed to save supplier. Please check your data or connection.')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+const getLogoUrl = (path) => {
+  if (!path) return ''
+  return path.startsWith('http') ? path : `${baseURL.replace('/api/', '')}${path}`
+}
+
 const refresh = async () => {
   try {
     const token = localStorage.getItem('token')
-    const response = await axios.get('http://localhost:8000/api/suppliers/', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+    const response = await api.get('suppliers/', {
+      headers: { Authorization: `Bearer ${token}` }
     })
     suppliers.value = response.data.map((s, index) => ({
       ...s,
@@ -153,6 +148,22 @@ const refresh = async () => {
   }
 }
 
+const loadStoreProfile = async () => {
+  try {
+    const response = await api.get('store-profile/')
+    if (response.data && response.data.length > 0) {
+      store.value = response.data[0]
+    }
+  } catch (error) {
+    console.error('Error loading store profile:', error)
+  }
+}
+
+onMounted(() => {
+  loadStoreProfile()
+  refresh()
+})
+
 </script>
 
 
@@ -162,105 +173,241 @@ const refresh = async () => {
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+          @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
-      <h1 class="text-lg font-semibold">FORNESEDÓR</h1>
+      <h1 class="text-lg font-semibold">SUPPLIER MANAGEMENT</h1>
     </div>
 
-    <!-- Table + Filter -->
-    <div class="p-2 flex flex-col flex-1 overflow-hidden">
-      <div class="flex-1 overflow-x-auto border border-gray-300 rounded-sm scrollbar-stable">
-        <table class="w-auto max-w-none min-w-[900px] lg:min-w-[1100px] xl:min-w-0 border-collapse text-sm table-fixed">
-          <colgroup>
-            <col style="width:24%" /> 
-            <col style="width:10%" /> 
-            <col style="width:18%" /> 
-            <col style="width:20%" /> 
-            <col style="width:28%" /> 
-          </colgroup>
+    <div class="p-4">
+      <!-- Filters -->
+      <div class="mb-6 flex flex-wrap items-center gap-4">
+        <div class="form-group mb-0">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Search Suppliers</label>
+          <input 
+            v-model="filter.name" 
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+            placeholder="Search by supplier name..."
+          />
+        </div>
+        <div class="form-group mb-0">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Code</label>
+          <input 
+            v-model="filter.kode" 
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+            placeholder="Search by code..."
+          />
+        </div>
+        <div class="form-group mb-0">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+          <input 
+            v-model="filter.phone" 
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+            placeholder="Search by phone..."
+          />
+        </div>
+        <div class="form-group mb-0">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input 
+            v-model="filter.email" 
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+            placeholder="Search by email..."
+          />
+        </div>
+        <button 
+          @click="addSupplier" 
+          class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Add Supplier
+        </button>
+      </div>
 
-          <thead class="bg-gradient-to-b from-white to-gray-100">
+      <!-- Suppliers Table -->
+      <div class="overflow-x-auto border border-gray-300 rounded-lg">
+        <table class="w-full border-collapse text-sm">
+          <thead class="bg-gray-50">
             <tr>
-              <th class="th text-left">Naran</th>
-              <th class="th text-left">Kodigu</th>
-              <th class="th text-left">Telemovel</th>
-              <th class="th text-left">Email</th>
-              <th class="th text-left">Enderesu</th>
-            </tr>
-            <tr>
-              <th class="th">
-                <input v-model="filter.name"  type="text" placeholder="Nama"    class="f-input" />
-              </th>
-              <th class="th">
-                <input v-model="filter.kode"  type="text" placeholder="Kode"    class="f-input" />
-              </th>
-              <th class="th">
-                <input v-model="filter.phone" type="text" placeholder="Telepon" class="f-input" />
-              </th>
-              <th class="th">
-                <input v-model="filter.email" type="text" placeholder="Email"   class="f-input" />
-              </th>
-              <th class="th"></th>
+              <th class="border-b border-gray-200 px-4 py-3 text-left font-medium text-gray-700">Supplier</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-left font-medium text-gray-700">Code</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-left font-medium text-gray-700">Contact</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-left font-medium text-gray-700">Address</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-left font-medium text-gray-700">Actions</th>
             </tr>
           </thead>
-
-          <tbody>
-            <tr
-              v-for="supplier in filteredSuppliers"
-              :key="supplier.id"
-              :class="[
-                'hover:bg-gray-50 cursor-pointer'
-              ]"
-              @click="selectedSupplier = supplier"
-            >
-              <td class="td" :title="supplier.name">{{ supplier.name || '-' }}</td>
-              <td class="td" :title="supplier.kode">{{ supplier.kode || '-' }}</td>
-              <td class="td" :title="supplier.phone">{{ supplier.phone || '-' }}</td>
-              <td class="td" :title="supplier.email">{{ supplier.email || '-' }}</td>
-              <td class="td" :title="supplier.address">{{ supplier.address || '-' }}</td>
+          <tbody class="divide-y divide-gray-200">
+            <tr v-for="supplier in filteredSuppliers" :key="supplier.id" class="hover:bg-gray-50" 
+                :class="{ 'bg-blue-50': selectedSupplier?.id === supplier.id }"
+                @click="selectedSupplier = supplier">
+              <td class="px-4 py-3">
+                <div class="font-medium text-gray-900">{{ supplier.name || 'No name' }}</div>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-900">{{ supplier.kode || 'No code' }}</td>
+              <td class="px-4 py-3">
+                <div class="text-sm text-gray-900">{{ supplier.phone || 'No phone' }}</div>
+                <div class="text-sm text-gray-500">{{ supplier.email || 'No email' }}</div>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-900">{{ supplier.address || 'No address' }}</td>
+              <td class="px-4 py-3">
+                <div class="flex space-x-2">
+                  <button 
+                    @click="editSupplier(supplier)"
+                    class="text-blue-600 hover:text-blue-900 transition-colors"
+                    title="Edit Supplier"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </button>
+                  <button 
+                    @click="deleteSupplier(supplier)"
+                    class="text-red-600 hover:text-red-900 transition-colors"
+                    title="Delete Supplier"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </button>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
       </div>
+    </div>
 
-      <!-- Footer -->
-      <div class="flex justify-between items-center mt-2 text-xs">
-        <div v-if="showModal" class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-          <div class="bg-white p-4 rounded shadow w-full max-w-md space-y-3">
-            <h2 class="text-lg font-semibold">{{ selectedSupplier ? '✏️ Edit Fornesédor' : '➕ Tambah Fornesédor' }}</h2>
-            <input v-model="supplierForm.name" placeholder="Naran" class="w-full border p-1 rounded-sm" />
-            <input v-model="supplierForm.phone" placeholder="Telemovel" class="w-full border p-1 rounded-sm" />
-            <input v-model="supplierForm.email" placeholder="Email" class="w-full border p-1 rounded-sm" />
-            <textarea v-model="supplierForm.address" placeholder="Enderesu" class="w-full border p-1 rounded-sm"></textarea>
-            <div class="flex justify-end gap-2 pt-2">
-              <button @click="showModal = false" class="px-3 py-1 border rounded hover:bg-gray-100">Kansela</button>
-              <button @click="saveSupplier" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
-                {{ selectedSupplier ? 'Atualiza' : 'Rai' }}
-              </button>
+    <!-- Create/Edit Supplier Modal -->
+    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-xl font-semibold text-gray-900">
+                {{ selectedSupplier ? 'Edit Supplier' : 'Add New Supplier' }}
+              </h3>
+              <p class="text-sm text-gray-500">
+                {{ selectedSupplier ? 'Update supplier information' : 'Create a new supplier' }}
+              </p>
             </div>
           </div>
+          <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
 
-        <div>
-          <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
-            <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
-          </select>
-        </div>
-        <div class="space-x-2 text-base">
-          <button @click="refresh" class="hover:text-blue-600">🔄</button>
-          <button @click="addSupplier" class="hover:text-green-600">➕</button>
-          <button @click="editSupplier" class="hover:text-gray-600">✏️</button>
-          <button @click="deleteSupplier" class="hover:text-red-600">❌</button>
-        </div>
+        <!-- Form -->
+        <form @submit.prevent="saveSupplier" class="p-6">
+          <!-- Basic Information -->
+          <div class="mb-8">
+            <h4 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <span class="w-7 h-7 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-semibold mr-3">1</span>
+              Basic Information
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Supplier Name -->
+              <div class="space-y-1">
+                <label class="block text-sm font-medium text-gray-700">Supplier Name *</label>
+                <input 
+                  v-model="supplierForm.name" 
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="Enter supplier name"
+                  required
+                />
+                <p class="text-sm text-gray-500">Company or business name</p>
+              </div>
+
+              <!-- Phone -->
+              <div class="space-y-1">
+                <label class="block text-sm font-medium text-gray-700">Phone Number</label>
+                <input 
+                  v-model="supplierForm.phone" 
+                  type="tel"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="e.g., +670 123 4567"
+                />
+                <p class="text-sm text-gray-500">Primary contact number</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="mb-8">
+            <h4 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+              <span class="w-7 h-7 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-semibold mr-3">2</span>
+              Contact Information
+            </h4>
+            
+            <div class="grid grid-cols-1 gap-6">
+              <!-- Email -->
+              <div class="space-y-1">
+                <label class="block text-sm font-medium text-gray-700">Email Address</label>
+                <input 
+                  v-model="supplierForm.email" 
+                  type="email"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="supplier@company.com"
+                />
+                <p class="text-sm text-gray-500">Primary email for communication</p>
+              </div>
+
+              <!-- Address -->
+              <div class="space-y-1">
+                <label class="block text-sm font-medium text-gray-700">Business Address</label>
+                <textarea 
+                  v-model="supplierForm.address" 
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="Enter complete business address..."
+                ></textarea>
+                <p class="text-sm text-gray-500">Physical location of the supplier</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <button 
+              type="button" 
+              @click="showModal = false" 
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              :disabled="loading"
+              class="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+            >
+              <svg v-if="loading" class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+              </svg>
+              {{ loading ? 'Saving...' : (selectedSupplier ? 'Update Supplier' : 'Create Supplier') }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
+
   </div>
   <FooterActions />
 </template>
 
 <style scoped>
-
 table { border-collapse: collapse; table-layout: fixed; }
 
 .th, .td {

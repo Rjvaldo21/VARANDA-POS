@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
 
 const store = ref({
@@ -20,12 +20,12 @@ const filter = ref({ warehouse: '', product: '', barcode: '' })
 
 const getLogoUrl = (path) => {
   if (!path) return ''
-  return path.startsWith('http') ? path : `http://localhost:8000${path}`
+  return path.startsWith('http') ? path : `${baseURL.replace('/api/', '')}${path}`
 }
 
 const fetchStoreProfile = async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/store-profile/')
+    const res = await api.get('store-profile/')
     if (res.data && res.data.length > 0) {
       store.value = res.data[0]
     }
@@ -36,10 +36,7 @@ const fetchStoreProfile = async () => {
 
 const fetchStockData = async () => {
   try {
-    const token = localStorage.getItem('token')
-    const res = await axios.get('http://localhost:8000/api/stocks/', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    const res = await api.get('stocks/')
     stocks.value = res.data
   } catch (err) {
     console.error('❌ Gagal fetch stok gudang:', err)
@@ -73,7 +70,7 @@ onMounted(async () => {
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+        @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
       <h1 class="text-lg font-semibold">STOK ARMAZÉN</h1>

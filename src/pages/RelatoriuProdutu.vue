@@ -1,16 +1,16 @@
 <script setup>
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
 import { ref, computed, onMounted } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
 
 /* ========= Store header ========= */
 const store = ref({ name:'', address:'', logo:'', version:'', location:'' })
 const formattedAddress = computed(() => (store.value.address || '').replace(/\n/g, '<br />'))
-const getLogoUrl = (path) => !path ? '' : (path.startsWith('http') ? path : `http://localhost:8000${path}`)
+const getLogoUrl = (path) => !path ? '' : (path.startsWith('http') ? path : `${baseURL.replace("/api/", "")}${path}`)
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/store-profile/')
+    const res = await api.get('store-profile/')
     if (res.data && res.data.length > 0) {
       store.value = res.data[0]
       console.log('Logo URL:', getLogoUrl(store.value.logo))
@@ -65,7 +65,7 @@ const fetchItemSales = async () => {
     if (filter.value.tanggal_awal) params.date_from = filter.value.tanggal_awal.slice(0,10)
     if (filter.value.tanggal_akhir) params.date_to   = filter.value.tanggal_akhir.slice(0,10)
 
-    const { data } = await axios.get('http://127.0.0.1:8000/api/reports/item-sales/', {
+    const { data } = await api.get('reports/item-sales/', {
       params,
       headers: { ...authHeader() }
     })
@@ -162,7 +162,7 @@ const downloadLaporan = () => {
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+        @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
       <h1 class="text-lg font-semibold">RELATORIU PRODUTU</h1>

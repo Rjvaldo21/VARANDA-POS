@@ -1,5 +1,5 @@
 <script setup>
-import axios from '@/axios'
+import api, { baseURL } from '@/axios'
 import { ref, computed, onMounted, watch } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
 
@@ -75,7 +75,7 @@ const perPage = ref(10)
 watch([startDate, endDate], async () => {
   if (!startDate.value || !endDate.value) return
   try {
-    const res = await axios.get('http://localhost:8000/api/transaction-summary/', {
+    const res = await api.get('transaction-summary/', {
       params: {
         start: startDate.value,
         end: endDate.value
@@ -186,7 +186,7 @@ const toRow = (raw) => {
 const fetchTableData = async () => {
   if (!startDate.value || !endDate.value) return
   try {
-    const res = await axios.get('http://localhost:8000/api/transactions/', {
+    const res = await api.get('transactions/', {
       params: { start: startDate.value, end: endDate.value }
     })
     const raw = Array.isArray(res.data) ? res.data : (res.data.results || [])
@@ -231,7 +231,7 @@ const displaySummary = computed(() =>
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/store-profile/')
+    const res = await api.get('store-profile/')
     if (res.data && res.data.length > 0) {
       store.value = res.data[0]
       console.log('Logo URL:', getLogoUrl(store.value.logo))
@@ -245,7 +245,7 @@ const formattedAddress = computed(() => store.value.address.replace(/\n/g, '<br 
 const getLogoUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `http://localhost:8000${path}`
+  return `${baseURL.replace(\"/api/\", \"\")}${path}`
 }
 
 </script>
@@ -257,7 +257,7 @@ const getLogoUrl = (path) => {
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+          @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
       <h1 class="text-lg font-semibold">RELATORIU TRANZASAUN</h1>

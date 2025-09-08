@@ -1,6 +1,5 @@
 <script setup>
 import { ref, watch, computed } from 'vue'
-import api from '@/axios'
 
 const props = defineProps({
   show: Boolean

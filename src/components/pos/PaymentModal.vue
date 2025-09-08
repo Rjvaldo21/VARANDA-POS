@@ -1,6 +1,5 @@
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue'
-import api from '@/axios'
 import { useCartStore } from '@/stores/cart'
 import { formatCurrency } from '@/utils/format'
 

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
+import api from '@/axios'
 
 const store = ref({
   name: '',

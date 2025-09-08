@@ -1,7 +1,17 @@
 import axios from 'axios'
 
+// Get base URL from environment variables with fallback
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api'
+
+// Ensure URL ends with /
+const baseURL = API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/',
+  baseURL,
+  timeout: 10000, // 10 seconds timeout
+  headers: {
+    'Content-Type': 'application/json',
+  },
 })
 
 api.interceptors.request.use(config => {
@@ -28,7 +38,7 @@ api.interceptors.response.use(
 
       try {
         const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/'}token/refresh/`,
+        `${baseURL}token/refresh/`,
         {refresh: refreshToken}
         )
 
@@ -47,6 +57,8 @@ api.interceptors.response.use(
   }
 )
 
+// Export both the configured axios instance and the base URL
 export default api
+export { baseURL, API_BASE_URL }
 
 

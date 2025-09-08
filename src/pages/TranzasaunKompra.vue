@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
 
 const store = ref({
   name: '',
@@ -40,16 +40,14 @@ const formattedAddress = computed(() =>
 
 const getLogoUrl = (path) => {
   if (!path) return ''
-  return path.startsWith('http') ? path : `http://localhost:8000${path}`
+  return path.startsWith('http') ? path : `baseURL.replace("/api/", "")${path}`
 }
 
 const fetchUsers = async () => {
   try {
     const token = localStorage.getItem('token')
-    const response = await axios.get('http://localhost:8000/api/users/', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+    const response = await api.get('users/', {
+      headers: { Authorization: `Bearer ${token}` }
     })
     users.value = response.data
   } catch (error) {
@@ -134,7 +132,7 @@ const applyManualDateFilter = () => {
 
 const fetchStoreProfile = async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/store-profile/')
+    const res = await api.get('store-profile/')
     if (res.data && res.data.length > 0) {
       store.value = res.data[0]
       console.log('Logo URL:', getLogoUrl(store.value.logo))
@@ -147,89 +145,24 @@ const fetchStoreProfile = async () => {
 const fetchPurchases = async () => {
   try {
     const token = localStorage.getItem('token')
-    const res = await axios.get('http://localhost:8000/api/purchases/', {
+    const res = await api.get('purchases/', {
       headers: { Authorization: `Bearer ${token}` }
     })
     purchases.value = res.data
   } catch (err) {
-    console.error('❌ Gagal fetch data kompra:', err)
+    console.error('❌ Falha fetch kompras:', err)
   }
-}
-
-const formatPrice = (value) => {
-  const number = Number(value)
-  return isNaN(number)
-    ? '$0.00'
-    : new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }).format(number)
-}
-
-const purchases = ref([])
-
-const totalPembelian = computed(() => {
-  return purchases.value.reduce((sum, p) => sum + (p.total || 0), 0)
-})
-
-onMounted(async () => {
-  isLoading.value = true
-  await fetchStoreProfile()
-  await fetchUsers()
-  await fetchPurchases()
-  isLoading.value = false
-})
-
-
-const filteredUsers = computed(() => {
-  return users.value.filter(u =>
-    u.username?.toLowerCase().includes(filter.value.username.toLowerCase()) &&
-    `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase().includes(filter.value.name.toLowerCase()) &&
-    u.email?.toLowerCase().includes(filter.value.email.toLowerCase())
-  )
-})
-
-const selectUser = (user) => {
-  selectedUser.value = user
-}
-
-const refresh = async () => {
-  await fetchUsers()
-  alert('🔄 Dadus utilizadór nian atualiza ona')
-}
-
-const addUser = () => {
-  modalMode.value = 'add'
-  userForm.value = { username: '', first_name: '', last_name: '', email: '' }
-  showUserModal.value = true
-}
-
-const editUser = () => {
-  if (!selectedUser.value) return alert('⚠️ Hili uzuariu uluk')
-  modalMode.value = 'edit'
-  userForm.value = {
-    username: selectedUser.value.username,
-    first_name: selectedUser.value.first_name,
-    last_name: selectedUser.value.last_name,
-    email: selectedUser.value.email
-  }
-  showUserModal.value = true
 }
 
 const saveUser = async () => {
-  if (!userForm.value.username || !userForm.value.first_name || !userForm.value.email) {
-    alert('⚠️ Favor prenxe hotu field nebe obrigatóriu (username, naran, email)')
-    return
-  }
-
   const token = localStorage.getItem('token')
   const headers = { Authorization: `Bearer ${token}` }
 
   try {
     if (modalMode.value === 'add') {
-      await axios.post('http://localhost:8000/api/users/', userForm.value, { headers })
+      await api.post('users/', userForm.value, { headers })
     } else {
-      await axios.put(`http://localhost:8000/api/users/${selectedUser.value.id}/`, userForm.value, { headers })
+      await api.put(`users/${selectedUser.value.id}/`, userForm.value, { headers })
     }
 
     showUserModal.value = false
@@ -248,10 +181,8 @@ const deleteUser = async () => {
 
   try {
     const token = localStorage.getItem('token')
-    await axios.delete(`http://localhost:8000/api/users/${selectedUser.value.id}/`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+    await api.delete(`users/${selectedUser.value.id}/`, {
+      headers: { Authorization: `Bearer ${token}` }
     })
     await fetchUsers()
     selectedUser.value = null
@@ -272,12 +203,10 @@ const lockUser = async () => {
 
   try {
     const token = localStorage.getItem('token')
-    await axios.patch(`http://localhost:8000/api/users/${selectedUser.value.id}/`, {
+    await api.patch(`users/${selectedUser.value.id}/`, {
       is_active: false
     }, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     })
     await fetchUsers()
     alert('🔒 Uzuáriu dezativa ho susesu')
@@ -295,7 +224,7 @@ const lockUser = async () => {
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+          @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
       <h1 class="text-lg font-semibold">KOMPRA</h1>
@@ -518,28 +447,10 @@ const lockUser = async () => {
 </template>
 
 <style scoped>
-table { border-collapse: collapse; table-layout: fixed; }
-
-.th, .td {
-  font-size: 13px;
-  white-space: nowrap;      
-  overflow: hidden;         
-  text-overflow: ellipsis;  
-  vertical-align: middle;
-  padding: 0.25rem 0.5rem;  
-  border: 1px solid #e5e7eb;
+table {
+  border-collapse: collapse;
 }
-
-.td-num { text-align: right; font-variant-numeric: tabular-nums; }
-
-
-.f-input {
-  width: 100%;
-  padding: 0.25rem 0.375rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  background: #fff;
+th, td {
+  font-size: 13px;
 }
 </style>

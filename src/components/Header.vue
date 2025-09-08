@@ -2,6 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import LanguageSwitcher from './LanguageSwitcher.vue'
+
+const { t } = useI18n()
 
 const activeMenu = ref(null)
 
@@ -33,30 +37,30 @@ const logout = () => {
 
 const menus = [
   {
-    name: 'File',
+    name: t('navigation.file'),
     submenu: [
-      { label: 'Konfigura', route: '/config' },
+      { label: t('navigation.configuration'), route: '/config' },
 
       { divider: true },
 
-       { label: 'Importa / Exporta', action: 'modal', modal: 'importExport' },
-      { label: 'Hafoun Database', action: 'modal', modal: 'resetDb' },
+       { label: t('navigation.importExport'), action: 'modal', modal: 'importExport' },
+      { label: t('navigation.resetDatabase'), action: 'modal', modal: 'resetDb' },
 
       { divider: true },
 
-      { label: 'Logout', action: 'logout' }
+      { label: t('navigation.logout'), action: 'logout' }
     ]
   },
   {
-    name: 'Administrasaun',
+    name: t('navigation.administration'),
     submenu: [
       {
-        label: 'Uzuariu',
+        label: t('navigation.users'),
         route: '/admin/users',
         group: 'main'
       },
       {
-        label: 'Komputador Kasir',
+        label: t('navigation.cashierStation'),
         route: '/admin/komputador',
         group: 'main'
       },
@@ -64,64 +68,64 @@ const menus = [
         divider: true
       },
       {
-        label: 'Troka Password', action: 'modal', modal: 'password', group: 'secondary'
+        label: t('navigation.changePassword'), action: 'modal', modal: 'password', group: 'secondary'
       }
     ]
   },
 
   {
-  name: 'Inventóriu',
+  name: t('navigation.inventory'),
     submenu: [
-      { label: 'Ketegoria', route: '/inventory/categories' },
-      { label: 'Fornesedór', route: '/inventory/suppliers' },
-      { label: 'Produtu', route: '/inventory/products' },
+      { label: t('navigation.categories'), route: '/inventory/categories' },
+      { label: t('navigation.suppliers'), route: '/inventory/suppliers' },
+      { label: t('navigation.products'), route: '/inventory/products' },
 
       { divider: true },
 
-      { label: 'Lista Kliente', route: '/inventory/customers' },
-      { label: 'Konfigura Pontos', route: '/inventory/points' },
+      { label: t('navigation.customers'), route: '/inventory/customers' },
+      { label: t('navigation.loyaltyPoints'), route: '/inventory/points' },
 
       { divider: true },
 
-      { label: 'Banku', route: '/inventory/banks' },
-      { label: 'Unidade', route: '/inventory/units' }
+      { label: t('navigation.banks'), route: '/inventory/banks' },
+      { label: t('navigation.units'), route: '/inventory/units' }
     ]
   },
   {
-    name: 'Tranzasaun',
+    name: t('navigation.transactions'),
     submenu: [
-      { label: 'Kasir Ctrl D', route: '/pos' },
-      { label: 'Retornu Fa\'an', route: '/sales/returns' },
+      { label: t('navigation.pos'), route: '/pos' },
+      { label: t('navigation.salesReturns'), route: '/sales/returns' },
 
       { divider: true },
 
-      { label: 'Kompra', route: '/purchases' },
-      { label: 'Retornu Kompra', route: '/purchases/returns' },
+      { label: t('navigation.purchases'), route: '/purchases' },
+      { label: t('navigation.purchaseReturns'), route: '/purchases/returns' },
 
       { divider: true },
 
-      { label: 'Hadia Stok', route: '/inventory/adjustment' }
+      { label: t('navigation.stockAdjustment'), route: '/inventory/adjustment' }
     ]
   },
     {
-    name: 'Relatóriu',
+    name: t('navigation.reports'),
     submenu: [
-      { label: 'Fa\'an', route: '/reports/sales' },
-      { label: 'Produtu', route: '/reports/products' },
+      { label: t('navigation.salesReport'), route: '/reports/sales' },
+      { label: t('navigation.productReport'), route: '/reports/products' },
 
       { divider: true },
 
-      { label: 'Tranzasaun', route: '/reports/transactions' },
-      { label: 'Finansas', route: '/reports/finance' }
+      { label: t('navigation.transactionReport'), route: '/reports/transactions' },
+      { label: t('navigation.financeReport'), route: '/reports/finance' }
     ]
   },
   {
-    name: 'Armazén',
+    name: t('navigation.warehouse'),
     submenu: [
-      { label: 'Lista Armazén', route: '/warehouse/list' },
-      { label: 'Stok Armazén', route: '/warehouse/stock' },
-      { label: 'Transferénsia Stok', route: '/warehouse/transfer' },
-      { label: 'Movimentu Stok', route: '/warehouse/movements' }
+      { label: t('navigation.warehouseList'), route: '/warehouse/list' },
+      { label: t('navigation.warehouseStock'), route: '/warehouse/stock' },
+      { label: t('navigation.stockTransfer'), route: '/warehouse/transfer' },
+      { label: t('navigation.stockMovements'), route: '/warehouse/movements' }
     ]
   }
 ]
@@ -130,35 +134,39 @@ const menus = [
 
 
 <template>
-  <header class="w-full border-b border-gray-300 px-4 py-2 text-sm bg-white z-50 relative">
-    <nav class="flex justify-between items-center w-full">
+  <header class="header">
+    <nav class="header-nav flex justify-between items-center w-full">
       <div class="flex space-x-0">
         <div
           class="relative"
           v-for="(menu, index) in menus"
           :key="index"
         >
-          <div
-            class="px-3 py-2 cursor-pointer text-center min-w-[80px] rounded-t"
+          <button
+            class="btn btn-secondary"
+            :class="{ 'btn-primary': activeMenu === menu.name }"
             @click="toggleMenu(menu.name)"
           >
             {{ menu.name }}
-          </div>
+          </button>
           <div
             v-if="activeMenu === menu.name"
-            class="absolute left-0 mt-1 bg-white shadow-md border rounded-b text-sm z-50 w-48"
+            class="absolute left-0 top-full mt-1 bg-white shadow-lg border border-gray-200 rounded-lg text-sm z-50 w-56 py-2"
           >
             <ul>
               <template v-for="(sub, idx) in menu.submenu" :key="idx">
                   <li v-if="sub.divider">
-                    <hr class="my-1 border-t border-gray-200" />
+                    <hr class="my-2 border-t border-gray-200" />
                   </li>
 
                   <li v-else-if="sub.action === 'logout'">
                     <button
                       @click="logout"
-                      class="block w-full text-left px-4 py-2 hover:[background-color:#4359E2] hover:text-white whitespace-nowrap"
+                      class="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md mx-2 transition-colors duration-150"
                     >
+                      <svg class="inline-block w-4 h-4 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                      </svg>
                       {{ sub.label }}
                     </button>
                   </li>
@@ -166,8 +174,12 @@ const menus = [
                   <li v-else-if="sub.action === 'modal'">
                     <button
                       @click="openModal(sub.modal)"
-                      class="block w-full text-left px-4 py-2 hover:[background-color:#4359E2] hover:text-white whitespace-nowrap"
+                      class="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded-md mx-2 transition-colors duration-150"
                     >
+                      <svg class="inline-block w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      </svg>
                       {{ sub.label }}
                     </button>
                   </li>
@@ -175,9 +187,13 @@ const menus = [
                   <li v-else>
                     <RouterLink
                       :to="sub.route || '#'"
-                      class="block w-full px-4 py-2 hover:[background-color:#4359E2] hover:text-white whitespace-nowrap"
+                      class="block w-full px-4 py-2 hover:bg-gray-100 rounded-md mx-2 transition-colors duration-150 flex items-center"
+                      :class="{ 'bg-blue-50 text-blue-700': $route.path === sub.route }"
                       @click="activeMenu = null"
                     >
+                      <svg class="inline-block w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                      </svg>
                       {{ sub.label }}
                     </RouterLink>
                   </li>
@@ -186,57 +202,75 @@ const menus = [
             </div>
           </div>
         </div>
+      <!-- Language Switcher -->
+      <div class="ml-4">
+        <LanguageSwitcher />
+      </div>
     </nav>
     <!-- Modal Popup -->
     <div
       v-if="showModal"
-      class="fixed inset-0 z-[100] bg-black/40 flex items-center justify-center"
+      class="modal-overlay"
+      @click.self="closeModal"
       @keydown.esc="closeModal"
     >
-      <div class="bg-white w-full max-w-lg rounded shadow-lg border relative">
+      <div class="modal-content w-full max-w-lg">
         <!-- Header -->
-        <div class="px-4 py-3 border-b flex items-center justify-between">
-          <h3 class="font-semibold">
-            {{ modalType === 'password' ? 'Troka Password'
-              : modalType === 'importExport' ? 'Importa / Exporta Baze-dadus'
-              : modalType === 'resetDb' ? 'Hafoun Baze-dadus'
+        <div class="card-header flex items-center justify-between">
+          <h3 class="font-semibold text-lg text-gray-800">
+            {{ modalType === 'password' ? t('navigation.changePassword')
+              : modalType === 'importExport' ? t('navigation.importExport')
+              : modalType === 'resetDb' ? t('navigation.resetDatabase')
               : '' }}
           </h3>
-          <button class="text-gray-500 hover:text-black" @click="closeModal">✖</button>
+          <button 
+            class="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors" 
+            @click="closeModal"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
 
         <!-- Body -->
-        <div class="p-4 space-y-4">
-          <!-- Troka Password -->
-          <div v-if="modalType === 'password'" class="space-y-3">
-            <div>
-              <label class="text-sm">Password Atual</label>
-              <input type="password" class="w-full border rounded px-3 py-2 mt-1" />
+        <div class="card-body space-y-4">
+          <!-- Change Password -->
+          <div v-if="modalType === 'password'" class="space-y-4">
+            <div class="form-group">
+              <label class="form-label">{{ t('auth.currentPassword') }}</label>
+              <input type="password" class="form-control" :placeholder="t('auth.enterCurrentPassword')" />
             </div>
-            <div>
-              <label class="text-sm">Password Foun</label>
-              <input type="password" class="w-full border rounded px-3 py-2 mt-1" />
+            <div class="form-group">
+              <label class="form-label">{{ t('auth.newPassword') }}</label>
+              <input type="password" class="form-control" :placeholder="t('auth.enterNewPassword')" />
             </div>
-            <div>
-              <label class="text-sm">Konfirma Password Foun</label>
-              <input type="password" class="w-full border rounded px-3 py-2 mt-1" />
+            <div class="form-group">
+              <label class="form-label">{{ t('auth.confirmPassword') }}</label>
+              <input type="password" class="form-control" :placeholder="t('auth.confirmNewPassword')" />
             </div>
           </div>
 
           <!-- Import / Export DB -->
             <div v-else-if="modalType === 'importExport'" class="space-y-3">
               <p class="text-sm text-gray-600">
-                Importa sei substitui Baze-dadus ho dados foun.
+                {{ t('settings.importWarning') }}
               </p>
               <p class="text-sm text-gray-600">
-                Exporta sei dada Baze-dadus ho dados agora.
+                {{ t('settings.exportInfo') }}
               </p>
-              <div class="flex gap-2">
-                <button class="px-4 py-2 border rounded hover:bg-gray-50">
-                  ⬆️ Importa Baze-dadus
+              <div class="flex gap-3">
+                <button class="btn btn-secondary flex items-center">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                  </svg>
+                  {{ t('settings.importDatabase') }}
                 </button>
-                <button class="px-4 py-2 border rounded hover:bg-gray-50">
-                  ⬇️ Exporta Baze-dadus
+                <button class="btn btn-primary flex items-center">
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                  </svg>
+                  {{ t('settings.exportDatabase') }}
                 </button>
               </div>
             </div>
@@ -244,36 +278,36 @@ const menus = [
             <!-- Reset DB -->
             <div v-else-if="modalType === 'resetDb'" class="space-y-3">
               <p class="text-sm text-red-600">
-                Atensaun: Aksaun ne’e sei <b>hafoun</b> Baze-dadus. ita iha serteza?
+                {{ t('settings.resetWarning') }}
               </p>
             </div>
           </div>
 
       <!-- Footer -->
-        <div class="px-4 py-3 border-t flex justify-end gap-2">
-          <button class="px-3 py-1 rounded border hover:bg-gray-50" @click="closeModal">
-            Kansela
+        <div class="card-footer flex justify-end gap-3">
+          <button class="btn btn-secondary" @click="closeModal">
+            {{ t('common.cancel') }}
           </button>
           <button
             v-if="modalType === 'password'"
-            class="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+            class="btn btn-primary"
             @click="/* TODO: submit ganti password */ closeModal()"
           >
-            Rai
+            {{ t('common.save') }}
           </button>
           <button
             v-else-if="modalType === 'importExport'"
-            class="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+            class="btn btn-primary"
             @click="closeModal"
           >
-            Ok
+            {{ t('common.confirm') }}
           </button>
           <button
             v-else-if="modalType === 'resetDb'"
-            class="px-3 py-1 rounded bg-red-600 text-white hover:bg-red-700"
+            class="btn btn-danger"
             @click="/* TODO: konfirmasi reset */ closeModal()"
           >
-            Hafoun Agora
+            {{ t('settings.resetNow') }}
           </button>
         </div>
       </div>

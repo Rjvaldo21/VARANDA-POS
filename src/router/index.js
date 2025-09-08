@@ -26,6 +26,7 @@ import WarehouseList from '@/pages/WarehouseList.vue'
 import WarehouseStock from '@/pages/WarehouseStock.vue'
 import StockTransfer from '@/pages/StockTransfer.vue'
 import StockMovements from '@/pages/StockMovementHistory.vue'
+import ImportData from '@/pages/ImportData.vue'
 
 
 const routes = [
@@ -63,6 +64,8 @@ const routes = [
   { path: '/warehouse/stock', component: WarehouseStock },
   { path: '/warehouse/transfer', component: StockTransfer },
   { path: '/warehouse/movements', component: StockMovements },
+  
+  { path: '/import', component: ImportData },
 
   // { path: '/help/about', component: Konaba },
   // { path: '/help/vue', component: KonabaVue },

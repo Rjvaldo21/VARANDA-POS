@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
 
 const store = ref({
   name: '',
@@ -15,7 +15,7 @@ const formattedAddress = computed(() => store.value.address.replace(/\n/g, '<br 
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/store-profile/')
+    const res = await api.get('store-profile/')
     if (res.data && res.data.length > 0) {
       store.value = res.data[0]
       console.log('Logo URL:', getLogoUrl(store.value.logo))
@@ -29,7 +29,7 @@ onMounted(async () => {
 const getLogoUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `http://localhost:8000${path}`
+  return `baseURL.replace("/api/", "")${path}`
 }
 
 onMounted(() => {
@@ -69,7 +69,7 @@ const fetchAdjustments = async () => {
       params.start = startDate.value
       params.end   = endDate.value
     }
-    const res = await axios.get('http://127.0.0.1:8000/api/stock-adjustments/', { params })
+    const res = await api.get('stock-adjustments/', { params })
     items.value = res.data
   } catch (err) {
     console.error('❌ Falha foti data hadia stok:', err)
@@ -191,7 +191,7 @@ const addItem = () => {
 // 🔹 Ambil data produk dari API
 const fetchProducts = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/products/')
+    const res = await api.get('products/')
     products.value = res.data
   } catch (err) {
     console.error('Gagal fetch produk:', err)
@@ -206,7 +206,7 @@ const submitForm = async () => {
       new_stock: parseInt(form.value.new_stock),
       reason: form.value.reason
     }
-    await axios.post('http://127.0.0.1:8000/api/stock-adjustments/', payload)
+    await api.post('stock-adjustments/', payload)
     alert('✅ Stock berhasil disesuaikan.')
     showModal.value = false
     form.value = { product: '', new_stock: '', reason: '' }
@@ -224,7 +224,7 @@ const submitForm = async () => {
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+          @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
       <h1 class="text-lg font-semibold">HADIA STOK</h1>

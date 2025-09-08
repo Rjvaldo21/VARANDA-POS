@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
-import api from '@/axios'
 
 const logoUrl = ref('')
 const storeName = ref('')
@@ -177,76 +177,144 @@ const buildLogoUrl = (path) => {
                     <p class="text-[11px] text-gray-500">Logo must be square. Max size is 512x512.</p>
                   </div>
                 </div>
-                <div class="mb-2">
-                  <label class="block text-xs font-medium mb-1">Name</label>
-                  <input v-model="storeName" class="border w-full px-2 py-1 text-sm rounded-sm" />
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Store Name *</label>
+                  <input 
+                    v-model="storeName" 
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Enter store name"
+                  />
+                  <p class="text-sm text-gray-500">Display name for your store</p>
                 </div>
-                <div class="mb-2">
-                  <label class="block text-xs font-medium mb-1">Enderesu</label>
-                  <input v-model="storeAddress" class="border w-full px-2 py-1 text-sm rounded-sm" />
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Store Address</label>
+                  <textarea 
+                    v-model="storeAddress" 
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Enter store address..."
+                  ></textarea>
+                  <p class="text-sm text-gray-500">Full business address</p>
                 </div>
-                <div class="mb-2">
-                  <label class="block text-xs font-medium mb-1">Lokalizasaun</label>
-                  <select v-model="storeLocation" class="border w-full px-2 py-1 text-sm rounded-sm">
-                    <option disabled value="">-- Hili Lokalizasaun --</option>
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Location</label>
+                  <select 
+                    v-model="storeLocation" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  >
+                    <option disabled value="">-- Select Location --</option>
                     <option v-for="loc in locationOptions" :key="loc.id" :value="loc.name">
                       {{ loc.name }}
                     </option>
                   </select>
+                  <p class="text-sm text-gray-500">Business location</p>
                 </div>
-                <div class="mb-2">
-                  <label class="block text-xs font-medium mb-1">Versaun</label>
-                  <input v-model="storeVersion" class="border w-full px-2 py-1 text-sm rounded-sm" />
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Version</label>
+                  <input 
+                    v-model="storeVersion" 
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="e.g., 1.0.0"
+                  />
+                  <p class="text-sm text-gray-500">System version</p>
                 </div>
-                <div class="mb-2">
-                  <label class="block text-xs font-medium mb-1">ID Mesin</label>
-                  <select v-model="machineId" class="border w-full px-2 py-1 text-sm rounded-sm">
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Machine ID</label>
+                  <select 
+                    v-model="machineId" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  >
                     <option value="Cashier 1">Cashier 1</option>
                     <option value="Cashier 2">Cashier 2</option>
                   </select>
+                  <p class="text-sm text-gray-500">Unique cashier station identifier</p>
                 </div>
-                <div class="mb-1 flex items-center gap-2">
-                  <input type="checkbox" v-model="taxEnabled" />
-                  <label class="text-xs">Taxa</label>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <h5 class="font-medium text-gray-900">Tax System</h5>
+                      <p class="text-sm text-gray-600">Enable tax calculations</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input v-model="taxEnabled" type="checkbox" class="sr-only">
+                      <div class="w-11 h-6 bg-gray-200 rounded-full transition-colors" :class="taxEnabled ? 'bg-blue-600' : ''">
+                        <div class="w-4 h-4 bg-white rounded-full shadow transform transition-transform" :class="taxEnabled ? 'translate-x-6' : 'translate-x-1'"></div>
+                      </div>
+                    </label>
+                  </div>
+                  <div v-if="taxEnabled" class="space-y-1">
+                    <label class="block text-sm font-medium text-gray-700">Tax Rate</label>
+                    <input
+                      v-model="taxRate"
+                      type="text"
+                      placeholder="e.g., 10%"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    />
+                    <p class="text-sm text-gray-500">Tax percentage (e.g., 10%)</p>
+                  </div>
                 </div>
-                <input
-                  v-model="taxRate"
-                  :disabled="!taxEnabled"
-                  placeholder="Exemplo: 10%"
-                  class="w-full border px-2 py-1 rounded-sm text-sm"
-                />
               </td>
 
               <!-- Kanan -->
               <td class="align-top w-1/2 p-3">
-                <div class="space-y-3">
-                  <div class="flex items-start gap-2">
-                    <input type="checkbox" v-model="useName" />
+                <div class="space-y-4">
+                  <h4 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                    <span class="w-7 h-7 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-semibold mr-3">⚙️</span>
+                    System Settings
+                  </h4>
+                  
+                  <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <label class="font-medium text-sm">Uza Naran</label>
-                      <p class="text-xs text-gray-600">Fitur buka ba sasán sira iha kasir.</p>
+                      <h5 class="font-medium text-gray-900">Use Customer Names</h5>
+                      <p class="text-sm text-gray-600">Enable customer name feature at cashier</p>
                     </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input v-model="useName" type="checkbox" class="sr-only">
+                      <div class="w-11 h-6 bg-gray-200 rounded-full transition-colors" :class="useName ? 'bg-blue-600' : ''">
+                        <div class="w-4 h-4 bg-white rounded-full shadow transform transition-transform" :class="useName ? 'translate-x-6' : 'translate-x-1'"></div>
+                      </div>
+                    </label>
                   </div>
-                  <div class="flex items-start gap-2">
-                    <input type="checkbox" v-model="autoCapitalize" />
+                  
+                  <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <label class="font-medium text-sm">Kapitál automátiku</label>
-                      <p class="text-xs text-gray-600">Input hotu-hotu automatikamente kapitaliza.</p>
+                      <h5 class="font-medium text-gray-900">Auto Capitalize</h5>
+                      <p class="text-sm text-gray-600">Automatically capitalize all text inputs</p>
                     </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input v-model="autoCapitalize" type="checkbox" class="sr-only">
+                      <div class="w-11 h-6 bg-gray-200 rounded-full transition-colors" :class="autoCapitalize ? 'bg-blue-600' : ''">
+                        <div class="w-4 h-4 bg-white rounded-full shadow transform transition-transform" :class="autoCapitalize ? 'translate-x-6' : 'translate-x-1'"></div>
+                      </div>
+                    </label>
                   </div>
-                  <div class="flex items-start gap-2">
-                    <input type="checkbox" v-model="useMinOrder" />
+                  
+                  <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <label class="font-medium text-sm">Uza pedidu mínimu</label>
-                      <p class="text-xs text-gray-600">Multi-presu ho pedidu mínimu.</p>
+                      <h5 class="font-medium text-gray-900">Minimum Order</h5>
+                      <p class="text-sm text-gray-600">Enable multi-pricing with minimum order quantities</p>
                     </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input v-model="useMinOrder" type="checkbox" class="sr-only">
+                      <div class="w-11 h-6 bg-gray-200 rounded-full transition-colors" :class="useMinOrder ? 'bg-blue-600' : ''">
+                        <div class="w-4 h-4 bg-white rounded-full shadow transform transition-transform" :class="useMinOrder ? 'translate-x-6' : 'translate-x-1'"></div>
+                      </div>
+                    </label>
                   </div>
-                  <div class="flex items-start gap-2">
-                    <input type="checkbox" v-model="allowZeroStock" />
+                  
+                  <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <label class="font-medium text-sm">Laiha stok disponivel atu fa'an</label>
-                      <p class="text-xs text-gray-600">Zero stok bele fa'an nafatin.</p>
+                      <h5 class="font-medium text-gray-900">Allow Zero Stock Sales</h5>
+                      <p class="text-sm text-gray-600">Continue selling products even when stock is zero</p>
                     </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input v-model="allowZeroStock" type="checkbox" class="sr-only">
+                      <div class="w-11 h-6 bg-gray-200 rounded-full transition-colors" :class="allowZeroStock ? 'bg-blue-600' : ''">
+                        <div class="w-4 h-4 bg-white rounded-full shadow transform transition-transform" :class="allowZeroStock ? 'translate-x-6' : 'translate-x-1'"></div>
+                      </div>
+                    </label>
                   </div>
                 </div>
               </td>
@@ -332,9 +400,15 @@ const buildLogoUrl = (path) => {
     </div>
 
     <!-- Footer -->
-    <div class="flex items-center justify-end px-4 py-2 border-t bg-white text-xs">
-      <button @click="saveProfile" class="px-4 py-1 bg-gray-200 border rounded hover:bg-gray-300">
-        Salva
+    <div class="flex items-center justify-end px-4 py-3 border-t bg-white">
+      <button 
+        @click="saveProfile" 
+        class="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+        </svg>
+        Save Configuration
       </button>
     </div>
   </div>

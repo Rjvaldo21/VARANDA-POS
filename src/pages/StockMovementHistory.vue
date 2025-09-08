@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
 
 const store = ref({
@@ -55,7 +55,7 @@ const deleteMovement = async () => {
   if (!confirm('Apaga movimentu nebee seleziona?')) return
 
   try {
-    await axios.delete(`http://localhost:8000/api/stock-movements/${selectedMovement.value.id}/`)
+    await api.delete(`stock-movements/${selectedMovement.value.id}/`)
     await fetchMovements()
     selectedMovement.value = null
     alert('✅ Movimentu apaga ho susesu')
@@ -68,9 +68,9 @@ const deleteMovement = async () => {
 const saveMovement = async () => {
   try {
     if (modalMode.value === 'add') {
-      await axios.post('http://localhost:8000/api/stock-movements/', movementForm.value)
+      await api.post('stock-movements/', movementForm.value)
     } else {
-      await axios.put(`http://localhost:8000/api/stock-movements/${selectedMovement.value.id}/`, movementForm.value)
+      await api.put(`stock-movements/${selectedMovement.value.id}/`, movementForm.value)
     }
     await fetchMovements()
     showModal.value = false
@@ -89,16 +89,16 @@ const perPage = ref(10)
 
 const getLogoUrl = (path) => {
   if (!path) return ''
-  return path.startsWith('http') ? path : `http://localhost:8000${path}`
+  return path.startsWith('http') ? path : `baseURL.replace("/api/", "")${path}`
 }
 
 const fetchStoreProfile = async () => {
-  const res = await axios.get('http://localhost:8000/api/store-profile/')
+  const res = await api.get('store-profile/')
   if (res.data.length > 0) store.value = res.data[0]
 }
 
 const fetchMovements = async () => {
-  const res = await axios.get('http://localhost:8000/api/stock-movements/')
+  const res = await api.get('stock-movements/')
   movementList.value = res.data
 }
 
@@ -130,7 +130,7 @@ const filteredMovements = computed(() => {
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+          @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
       <h1 class="text-lg font-semibold">MOVIMENTU STOK</h1>

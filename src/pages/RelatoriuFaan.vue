@@ -1,7 +1,10 @@
 <script setup>
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
 import { ref, computed, onMounted } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const store = ref({
   name: '',
@@ -79,7 +82,7 @@ const formattedAddress = computed(() => store.value.address.replace(/\n/g, '<br 
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/store-profile/')
+    const res = await api.get('store-profile/')
     if (res.data && res.data.length > 0) {
       store.value = res.data[0]
       console.log('Logo URL:', getLogoUrl(store.value.logo))
@@ -93,7 +96,7 @@ onMounted(async () => {
 const getLogoUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `http://localhost:8000${path}`
+  return `${baseURL.replace("/api/", "")}${path}`
 }
 
 const totalPenjualanAPI = ref(0)
@@ -131,8 +134,8 @@ const fetchSalesTotal = async ({ period, from, to } = {}) => {
       params.period = 'today'
     }
 
-    const res = await axios.get(
-      'http://127.0.0.1:8000/api/sales/total/',
+    const res = await api.get(
+      'sales/total/',
       { params, headers: { ...authHeader() } } 
     )
 
@@ -201,96 +204,198 @@ const totalMargin = computed(() =>
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+        @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
-      <h1 class="text-lg font-semibold">RELATORIU FA'AN</h1>
+      <h1 class="text-lg font-semibold">SALES REPORT</h1>
     </div>
 
-    <!-- Summary -->
-    <div class="flex gap-4 px-2 pt-3">
-      <div class="border rounded-sm px-3 py-2 w-40 text-right">
-        <div class="text-xs text-gray-500 text-left">Total Fa'an</div>
-        <div class="text-lg font-bold">{{ formatUSD(totalPenjualanAPI) }}</div>
+    <div class="p-4">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg px-4 py-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium text-blue-600">Total Sales</div>
+              <div class="text-2xl font-bold text-blue-900">{{ formatUSD(totalPenjualanAPI) }}</div>
+            </div>
+            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg px-4 py-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium text-green-600">Profit Margin</div>
+              <div class="text-2xl font-bold text-green-900">{{ formatUSD(totalMarginAPI) }}</div>
+            </div>
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg px-4 py-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium text-purple-600">Transactions</div>
+              <div class="text-2xl font-bold text-purple-900">{{ filteredData.length }}</div>
+            </div>
+            <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg px-4 py-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium text-orange-600">Average Sale</div>
+              <div class="text-2xl font-bold text-orange-900">{{ filteredData.length > 0 ? formatUSD(totalPenjualan / filteredData.length) : '$0.00' }}</div>
+            </div>
+            <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+              <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="border rounded-sm px-3 py-2 w-40 text-right">
-        <div class="text-xs text-gray-500 text-left">Marjen</div>
-        <div class="text-lg font-bold">{{ formatUSD(totalMarginAPI) }}</div>
+
+      <!-- Filters -->
+      <div class="mb-6 flex flex-wrap items-center gap-4">
+        <div class="form-group mb-0">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+          <select @change="handleFilterChange($event)" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option :value="'today'">📅 {{ todayFormatted }}</option>
+            <option value="">🗓️ Custom Date Range</option>
+          </select>
+        </div>
+        <div class="form-group mb-0">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Barcode</label>
+          <input 
+            v-model="filter.barcode" 
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+            placeholder="Search by barcode..."
+          />
+        </div>
+        <div class="form-group mb-0">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+          <input 
+            v-model="filter.nama" 
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+            placeholder="Search by product name..."
+          />
+        </div>
+      </div>
+
+      <!-- Sales Table -->
+      <div class="overflow-x-auto border border-gray-300 rounded-lg">
+        <table class="w-full border-collapse text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="border-b border-gray-200 px-4 py-3 text-left font-medium text-gray-700">Date</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-left font-medium text-gray-700">Product</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-right font-medium text-gray-700">Qty</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-left font-medium text-gray-700">Unit</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-right font-medium text-gray-700">Cost Price</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-right font-medium text-gray-700">Total</th>
+              <th class="border-b border-gray-200 px-4 py-3 text-right font-medium text-gray-700">Margin</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200">
+            <tr v-for="item in filteredData" :key="item.id" class="hover:bg-gray-50">
+              <td class="px-4 py-3 text-sm text-gray-900">{{ item.tanggal }}</td>
+              <td class="px-4 py-3">
+                <div class="font-medium text-gray-900">{{ item.nama }}</div>
+                <div class="text-sm text-gray-500">{{ item.barcode }}</div>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-900 text-right">{{ item.qty }}</td>
+              <td class="px-4 py-3 text-sm text-gray-900">{{ item.satuan }}</td>
+              <td class="px-4 py-3 text-sm text-gray-900 text-right font-medium">{{ formatUSD(item.harga_beli) }}</td>
+              <td class="px-4 py-3 text-sm text-gray-900 text-right font-bold">{{ formatUSD(item.total) }}</td>
+              <td class="px-4 py-3 text-sm text-right">
+                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                      :class="item.margin >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                  {{ formatUSD(item.margin) }}
+                </span>
+              </td>
+            </tr>
+            <tr v-if="filteredData.length === 0" class="hover:bg-gray-50">
+              <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <p class="mt-2">No sales data found for the selected criteria</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="flex-1 overflow-auto border border-gray-300 mx-2 mt-2">
-      <table class="w-full table-fixed border-collapse text-sm">
-        <thead class="bg-gradient-to-b from-white to-gray-100">
-          <tr>
-            <th class="th w-56">
-              <select @change="handleFilterChange($event)" class="f-input">
-                <option :value="'today'">📅 {{ todayFormatted }}</option>
-                <option value="">🗓️ Hili kalendariu</option>
-              </select>
-            </th>
-            <th class="th w-32">
-              <input v-model="filter.barcode" type="text" placeholder="Barcode" class="f-input" />
-            </th>
-            <th class="th w-48">
-              <input v-model="filter.nama" type="text" placeholder="Naran" class="f-input" />
-            </th>
-            <th class="th w-16 text-right">Qty</th>
-            <th class="th w-20 text-right">Unidade</th>
-            <th class="th w-24 text-right">Total</th>
-            <th class="th w-28 text-right whitespace-normal break-words">Presu Kompra</th>
-            <th class="th w-24 text-right">Margin</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr v-for="item in filteredData" :key="item.id" class="hover:bg-gray-50">
-            <td class="td">{{ item.tanggal }}</td>
-            <td class="td">{{ item.barcode }}</td>
-            <td class="td">{{ item.nama }}</td>
-            <td class="td text-right">{{ item.qty }}</td>
-            <td class="td text-right">{{ item.satuan }}</td>
-            <td class="td text-right">{{ item.total }}</td>
-            <td class="td text-right">{{ item.harga_beli }}</td>
-            <td class="td text-right">{{ item.margin }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Footer -->
-    <div class="flex justify-between items-center mt-2 text-xs px-2 pb-2">
-      <div>
-        <select v-model="perPage" class="f-input">
-          <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
-        </select>
-      </div>
-      <div class="space-x-2 text-base">
-        <button @click="refresh" class="hover:text-blue-600">🔄</button>
-        <button @click="downloadLaporan" class="hover:text-green-600">⬇</button>
-      </div>
-    </div>
   </div>
 
-  <!-- 📅 Modal Kalendariu Manual -->
-  <div v-if="showDatePopup" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-    <div class="bg-white p-4 rounded shadow w-[300px]">
-      <h2 class="text-sm font-semibold mb-2">Hili Data Manual</h2>
-      <div class="mb-2">
-        <label class="text-xs">Data Inísiu:</label>
-        <input v-model="manualStart" type="datetime-local" class="f-input" />
-      </div>
-      <div class="mb-2">
-        <label class="text-xs">Data Final:</label>
-        <input v-model="manualEnd" type="datetime-local" class="f-input" />
-      </div>
-      <div class="flex justify-end gap-2 mt-2 text-xs">
-        <button @click="showDatePopup = false" class="px-2 py-1 border rounded hover:bg-gray-100">Kansela</button>
-        <button @click="applyManualDateFilter" class="px-2 py-1 border bg-blue-600 text-white rounded hover:bg-blue-700">Ok</button>
+    <!-- Custom Date Range Modal -->
+    <div v-if="showDatePopup" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">Custom Date Range</h3>
+          <button @click="showDatePopup = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Form -->
+        <div class="p-6">
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input 
+                v-model="manualStart" 
+                type="datetime-local" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input 
+                v-model="manualEnd" 
+                type="datetime-local" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+              />
+            </div>
+          </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="flex items-center justify-end p-6 border-t border-gray-200 space-x-3">
+          <button 
+            @click="showDatePopup = false" 
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            @click="applyManualDateFilter" 
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            Apply Filter
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
   <FooterActions />
 </template>

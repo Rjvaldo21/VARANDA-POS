@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref, computed } from 'vue'
-import api from '@/axios'
+import api, { baseURL } from '@/axios'
 
 const store = ref({
   name: '',
@@ -28,7 +28,7 @@ onMounted(async () => {
 const getLogoUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `http://localhost:8000${path}`
+  return `${baseURL.replace('/api/', '')}${path}`
 }
 
 </script>

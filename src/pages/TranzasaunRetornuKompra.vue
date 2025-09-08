@@ -1,5 +1,5 @@
 <script setup>
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
 import { ref, computed, onMounted } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
 
@@ -25,7 +25,7 @@ const perPage = ref(10)
 const getLogoUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `http://localhost:8000${path}`
+  return `baseURL.replace("/api/", "")${path}`
 }
 
 const formatPrice = (val) => {
@@ -135,10 +135,10 @@ onMounted(async () => {
   try {
     const token = localStorage.getItem('token')
     const [resReturns, resStore] = await Promise.all([
-      axios.get('http://localhost:8000/api/purchase-returns/', {
+      api.get('purchase-returns/', {
         headers: { Authorization: `Bearer ${token}` }
       }),
-      axios.get('http://localhost:8000/api/store-profile/')
+      api.get('store-profile/')
     ])
 
     console.log('🛒 Data Purchase Returns:', resReturns.data)
@@ -172,7 +172,7 @@ const pricePerItem = (refunded_amount, qty) => {
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+        @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
       <h1 class="text-lg font-semibold">RETORNU KOMPRA</h1>
@@ -264,56 +264,269 @@ const pricePerItem = (refunded_amount, qty) => {
               </tr>
             </thead>
 
-            <tbody>
-              <tr v-for="item in filteredReturns" :key="item.id" class="hover:bg-gray-50">
-                <td class="td">{{ dateOnly(item?.returned_at) }}</td>
-                <td class="td" :title="item?.product?.sku || '-'">{{ item?.product?.sku ?? '-' }}</td>
-                <td class="td" :title="item?.product?.name || '-'">{{ item?.product?.name ?? '-' }}</td>
-                <td class="td" :title="item?.purchase?.supplier?.name || '-'">{{ item?.purchase?.supplier?.name ?? '-' }}</td>
-                <td class="td">{{ item?.status ?? '-' }}</td>
-                <td class="td td-num">{{ item?.quantity ?? 0 }}</td>
-                <td class="td td-num">{{ formatPrice(item?.total_refund_value ?? 0) }}</td>
-                <td class="td">{{ dateOnly(item?.returned_at) }}</td>
-                <td class="td td-num">{{ pricePerItem(item?.refunded_amount, item?.quantity) }}</td>
-                <td class="td td-num">{{ formatPrice(item?.refunded_amount ?? 0) }}</td>
-                <td class="td" :title="item?.reason || '-'">{{ item?.reason ?? '-' }}</td>
-              </tr>
-            </tbody>
+          <tbody class="divide-y divide-gray-200">
+            <tr v-if="loading">
+              <td colspan="8" class="px-4 py-8 text-center text-gray-500">Loading returns...</td>
+            </tr>
+            <tr v-else-if="filteredReturns.length === 0">
+              <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m5 14v-5a2 2 0 00-2-2H6a2 2 0 00-2 2v5a2 2 0 002 2h14a2 2 0 002-2z"></path>
+                </svg>
+                <p>No returns found</p>
+              </td>
+            </tr>
+            <tr v-else v-for="item in filteredReturns" :key="item.id" class="hover:bg-gray-50" 
+                :class="{ 'bg-blue-50': selectedReturn?.id === item.id }"
+                @click="selectedReturn = item">
+              <td class="px-4 py-3 text-sm text-gray-900">{{ dateOnly(item?.returned_at) }}</td>
+              <td class="px-4 py-3">
+                <div class="font-medium text-gray-900">{{ item?.product?.name || 'No name' }}</div>
+                <div class="text-sm text-gray-500">{{ item?.product?.sku || 'No SKU' }}</div>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-900">{{ item?.purchase?.supplier?.name || 'No supplier' }}</td>
+              <td class="px-4 py-3 text-center">
+                <span 
+                  class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                  :class="{
+                    'bg-green-100 text-green-800': item?.status === 'Approved',
+                    'bg-yellow-100 text-yellow-800': item?.status === 'Pending',
+                    'bg-red-100 text-red-800': item?.status === 'Rejected'
+                  }"
+                >
+                  {{ item?.status || 'Unknown' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-900 text-right font-medium">{{ item?.quantity || 0 }}</td>
+              <td class="px-4 py-3 text-sm text-gray-900 text-right font-medium">{{ formatPrice(item?.refunded_amount || 0) }}</td>
+              <td class="px-4 py-3 text-sm text-gray-900">{{ item?.reason || 'No reason' }}</td>
+              <td class="px-4 py-3">
+                <div class="flex space-x-2">
+                  <button 
+                    @click="editReturn(item)"
+                    class="text-blue-600 hover:text-blue-900 transition-colors"
+                    title="Edit Return"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                  </button>
+                  <button 
+                    @click="deleteReturn(item)"
+                    class="text-red-600 hover:text-red-900 transition-colors"
+                    title="Delete Return"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
           </table>
-        </div>
+      </div>
 
-        <!-- Popup pilih rentang tanggal -->
-        <div v-if="showDatePopup" class="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center">
-          <div class="bg-white rounded shadow p-4 w-full max-w-md">
-            <div class="text-base font-semibold mb-3">Hili rentang data</div>
-            <div class="grid grid-cols-2 gap-3">
+      <!-- Date Range Modal -->
+      <div v-if="showDatePopup" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div class="p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Select Date Range</h3>
+            <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="text-xs text-gray-600">Desde (YYYY-MM-DD)</label>
-                <input type="date" v-model="manualStart" class="w-full border rounded px-2 py-1" />
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input type="date" v-model="manualStart" class="w-full border border-gray-300 rounded-lg px-3 py-2" />
               </div>
               <div>
-                <label class="text-xs text-gray-600">To’o (YYYY-MM-DD)</label>
-                <input type="date" v-model="manualEnd" class="w-full border rounded px-2 py-1" />
+                <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input type="date" v-model="manualEnd" class="w-full border border-gray-300 rounded-lg px-3 py-2" />
               </div>
             </div>
-            <div class="mt-4 flex justify-end gap-2">
-              <button class="px-3 py-1 rounded border hover:bg-gray-50" @click="showDatePopup=false">Kansela</button>
-              <button class="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700" @click="applyManualRange">Aplika</button>
+            <div class="flex justify-end gap-3 mt-6">
+              <button 
+                @click="showDatePopup = false" 
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button 
+                @click="applyManualRange" 
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700"
+              >
+                Apply
+              </button>
             </div>
           </div>
         </div>
+      </div>
 
-      <div class="flex justify-between items-center mt-2 text-xs">
-        <div>
-          <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
-            <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
-          </select>
-        </div>
-        <div class="space-x-2 text-base">
-          <button @click="refresh" class="hover:text-blue-600">🔄</button>
-          <button @click="addItem" class="hover:text-green-600">➕</button>
-          <button @click="editItem" class="hover:text-gray-600">✏️</button>
-          <button @click="deleteItem" class="hover:text-red-600">❌</button>
+      <!-- Return Form Modal -->
+      <div v-if="showForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <!-- Header -->
+          <div class="flex items-center justify-between p-6 border-b border-gray-200">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m5 14v-5a2 2 0 00-2-2H6a2 2 0 00-2 2v5a2 2 0 002 2h14a2 2 0 002-2z"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="text-xl font-semibold text-gray-900">
+                  {{ isEditing ? 'Edit Purchase Return' : 'Add New Purchase Return' }}
+                </h3>
+                <p class="text-sm text-gray-500">
+                  {{ isEditing ? 'Update return information' : 'Create a new purchase return' }}
+                </p>
+              </div>
+            </div>
+            <button @click="showForm = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Form -->
+          <form @submit.prevent="saveReturn" class="p-6">
+            <!-- Basic Information -->
+            <div class="mb-8">
+              <h4 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <span class="w-7 h-7 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-semibold mr-3">1</span>
+                Return Information
+              </h4>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Purchase ID -->
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Purchase ID *</label>
+                  <input 
+                    v-model="returnForm.purchase_id" 
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Enter purchase ID"
+                    required
+                  />
+                  <p class="text-sm text-gray-500">ID of the original purchase</p>
+                </div>
+
+                <!-- Product ID -->
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Product ID *</label>
+                  <input 
+                    v-model="returnForm.product_id" 
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Enter product ID"
+                    required
+                  />
+                  <p class="text-sm text-gray-500">ID of the returned product</p>
+                </div>
+
+                <!-- Quantity -->
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Quantity *</label>
+                  <input 
+                    v-model="returnForm.quantity" 
+                    type="number"
+                    min="1"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="1"
+                    required
+                  />
+                  <p class="text-sm text-gray-500">Number of items returned</p>
+                </div>
+
+                <!-- Refunded Amount -->
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Refunded Amount *</label>
+                  <input 
+                    v-model="returnForm.refunded_amount" 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="0.00"
+                    required
+                  />
+                  <p class="text-sm text-gray-500">Amount to be refunded</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="mb-8">
+              <h4 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <span class="w-7 h-7 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-semibold mr-3">2</span>
+                Additional Details
+              </h4>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Status -->
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">Status *</label>
+                  <select 
+                    v-model="returnForm.status" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    required
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                  <p class="text-sm text-gray-500">Current status of the return</p>
+                </div>
+
+                <!-- User -->
+                <div class="space-y-1">
+                  <label class="block text-sm font-medium text-gray-700">User</label>
+                  <input 
+                    v-model="returnForm.user" 
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Enter user"
+                  />
+                  <p class="text-sm text-gray-500">User handling the return</p>
+                </div>
+              </div>
+              
+              <!-- Reason -->
+              <div class="mt-6 space-y-1">
+                <label class="block text-sm font-medium text-gray-700">Reason</label>
+                <textarea 
+                  v-model="returnForm.reason" 
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  placeholder="Enter reason for return..."
+                ></textarea>
+                <p class="text-sm text-gray-500">Explanation for the return</p>
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+              <button 
+                type="button" 
+                @click="showForm = false" 
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                :disabled="saving"
+                class="px-6 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+              >
+                <svg v-if="saving" class="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                </svg>
+                {{ saving ? 'Saving...' : (isEditing ? 'Update Return' : 'Create Return') }}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -322,32 +535,10 @@ const pricePerItem = (refunded_amount, qty) => {
 </template>
 
 <style scoped>
-
-table { border-collapse: collapse; table-layout: fixed; }
-
-.th, .td {
+table {
+  border-collapse: collapse;
+}
+th, td {
   font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #e5e7eb;
 }
-
-.td-num { text-align: right; font-variant-numeric: tabular-nums; }
-
-.f-input {
-  width: 100%;
-  padding: 0.25rem 0.375rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  background: #fff;
-}
-
-.f-select { min-width: 9.5rem; }
-
-
 </style>

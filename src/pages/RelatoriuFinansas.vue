@@ -1,5 +1,5 @@
 <script setup>
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
 import { ref, computed, onMounted } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
 
@@ -50,8 +50,8 @@ const fetchFinanceSummary = async () => {
       params.date_from = toDate(startDate.value)
       params.date_to   = toDate(endDate.value)
     }
-    const { data } = await axios.get(
-      'http://127.0.0.1:8000/api/finance/summary/',
+    const { data } = await api.get(
+      'finance/summary/',
       { params, headers: { ...authHeader() } }   
     )
     totalNet.value = Number(data?.total_net) || 0
@@ -68,8 +68,8 @@ const fetchFinanceEntries = async () => {
       params.date_from = toDate(startDate.value)
       params.date_to   = toDate(endDate.value)
     }
-    const { data } = await axios.get(
-      'http://127.0.0.1:8000/api/finance/entries/',
+    const { data } = await api.get(
+      'finance/entries/',
       { params, headers: { ...authHeader() } }   
     )
     rows.value = data?.results || data || []
@@ -117,7 +117,7 @@ const filteredRows = computed(() => {
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/store-profile/')
+    const res = await api.get('store-profile/')
     if (res.data && res.data.length > 0) {
       store.value = res.data[0]
       console.log('Logo URL:', getLogoUrl(store.value.logo))
@@ -135,7 +135,7 @@ onMounted(async () => {
 const getLogoUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `http://localhost:8000${path}`
+  return `${baseURL.replace(\"/api/\", \"\")}${path}`
 }
 
 defineOptions({ inheritAttrs: false })
@@ -170,7 +170,7 @@ const manualEnd = ref('')
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img
         :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+        @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
         class="h-6 w-6 rounded"
       />
       <h1 class="text-lg font-semibold">RELATORIU FINANSAS</h1>
