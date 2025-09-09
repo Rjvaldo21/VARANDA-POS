@@ -25,8 +25,9 @@
     "status": "Status",
     "actions": "Actions",
     "close": "Close",
-    "select": "Select",
-    "choose": "Choose"
+    "select": "Select", 
+    "choose": "Choose",
+    "reset": "Reset"
   },
   "auth": {
     "login": "Login",
@@ -161,9 +162,28 @@
     "importWarning": "Import will replace database with new data.",
     "exportInfo": "Export will save current database data.",
     "importDatabase": "Import Database",
-    "exportDatabase": "Export Database",
+    "exportDatabase": "Export Database", 
     "resetWarning": "Warning: This action will reset the database. Are you sure?",
-    "resetNow": "Reset Now"
+    "resetNow": "Reset Now",
+    "storeInformation": "Store Information",
+    "systemPreferences": "System Preferences", 
+    "printerConfiguration": "Printer Configuration",
+    "customerDisplay": "Customer Display",
+    "saveChanges": "Save Changes",
+    "general": "General",
+    "printer": "Printer",
+    "display": "Display",
+    "storeName": "Store Name",
+    "storeAddress": "Store Address",
+    "storeLocation": "Store Location",
+    "storeVersion": "Store Version",
+    "machineId": "Machine ID",
+    "taxSystem": "Tax System",
+    "taxRate": "Tax Rate",
+    "customerNames": "Customer Names",
+    "autoCapitalize": "Auto Capitalize",
+    "minimumOrder": "Minimum Order",
+    "zeroStockSales": "Zero Stock Sales"
   },
   "payment": {
     "customer": "Customer",
@@ -183,7 +203,16 @@
     "adjustment": "Stock Adjustment",
     "stockIn": "Stock In",
     "stockOut": "Stock Out",
-    "transferData": "Transfer data has been updated"
+    "transferData": "Transfer data has been updated",
+    "stockMovements": "Stock Movements",
+    "stockTransfers": "Stock Transfers",
+    "warehouseStock": "Warehouse Stock",
+    "newMovement": "New Movement",
+    "newTransfer": "New Transfer",
+    "totalMovements": "Total Movements",
+    "pendingTransfers": "Pending Transfers",
+    "completedTransfers": "Completed Transfers",
+    "totalQuantity": "Total Quantity"
   },
   "messages": {
     "success": "Operation completed successfully",

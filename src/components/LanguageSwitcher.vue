@@ -3,10 +3,11 @@
     <select 
       v-model="currentLocale" 
       @change="changeLanguage"
-      class="bg-white border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      class="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
     >
-      <option value="pt">🇹🇱 Português/Tetum</option>
+      <option value="tet">🇹🇱 Tetun</option>
       <option value="en">🇺🇸 English</option>
+      <option value="pt">🇵🇹 Português</option>
     </select>
   </div>
 </template>

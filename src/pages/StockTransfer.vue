@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FooterActions from '@/components/pos/FooterActions.vue'
 import api from '@/axios'
+
+const { t } = useI18n()
 
 const store = ref({
   name: '',
@@ -182,13 +185,13 @@ const filteredTransfers = computed(() => {
           class="h-8 w-8 rounded-lg shadow-sm"
         />
         <div>
-          <h1 class="text-xl font-bold text-gray-800">🔄 Stock Transfers</h1>
-          <p class="text-sm text-gray-600">Manage stock transfers between warehouses</p>
+          <h1 class="text-xl font-bold text-gray-800">🔄 {{ t('inventory.stockTransfers') }}</h1>
+          <p class="text-sm text-gray-600">{{ t('inventory.stockTransfers') }}</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
         <button @click="openAddModal" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm transition-colors">
-          <span class="text-sm font-medium">➕ New Transfer</span>
+          <span class="text-sm font-medium">➕ {{ t('inventory.newTransfer') }}</span>
         </button>
       </div>
     </div>

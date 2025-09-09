@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
+
+const { t } = useI18n()
 
 const store = ref({
   name: '',
@@ -179,13 +182,13 @@ const filteredMovements = computed(() => {
           class="h-8 w-8 rounded-lg shadow-sm"
         />
         <div>
-          <h1 class="text-xl font-bold text-gray-800">📊 Stock Movements</h1>
-          <p class="text-sm text-gray-600">Track all stock movement history</p>
+          <h1 class="text-xl font-bold text-gray-800">📊 {{ t('inventory.stockMovements') }}</h1>
+          <p class="text-sm text-gray-600">{{ t('inventory.stockMovements') }}</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
         <button @click="openAdd" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition-colors">
-          <span class="text-sm font-medium">➕ New Movement</span>
+          <span class="text-sm font-medium">➕ {{ t('inventory.newMovement') }}</span>
         </button>
       </div>
     </div>
@@ -197,7 +200,7 @@ const filteredMovements = computed(() => {
         <div class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-blue-600">Total Movements</p>
+              <p class="text-sm font-medium text-blue-600">{{ t('inventory.totalMovements') }}</p>
               <p class="text-xl font-bold text-blue-800">{{ totalMovements }}</p>
             </div>
             <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -210,7 +213,7 @@ const filteredMovements = computed(() => {
         <div class="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-green-600">Stock In</p>
+              <p class="text-sm font-medium text-green-600">{{ t('inventory.stockIn') }}</p>
               <p class="text-xl font-bold text-green-800">{{ stockInMovements }}</p>
             </div>
             <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -223,7 +226,7 @@ const filteredMovements = computed(() => {
         <div class="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-red-600">Stock Out</p>
+              <p class="text-sm font-medium text-red-600">{{ t('inventory.stockOut') }}</p>
               <p class="text-xl font-bold text-red-800">{{ stockOutMovements }}</p>
             </div>
             <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -236,7 +239,7 @@ const filteredMovements = computed(() => {
         <div class="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-purple-600">Total Quantity</p>
+              <p class="text-sm font-medium text-purple-600">{{ t('inventory.totalQuantity') }}</p>
               <p class="text-xl font-bold text-purple-800">{{ totalQuantityMoved.toLocaleString() }}</p>
             </div>
             <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">

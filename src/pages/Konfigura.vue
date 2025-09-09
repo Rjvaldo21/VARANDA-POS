@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
+
+const { t } = useI18n()
 
 const logoUrl = ref('')
 const storeName = ref('')
@@ -33,7 +36,7 @@ const setLogoFromPath = (path) => {
 }
 
 const logoSrc = computed(() => {
-  if (!logoUrl.value) return 'http://127.0.0.1:8000/media/logos/default.jpg'
+  if (!logoUrl.value) return `${baseURL.replace('/api/', '')}/media/logos/default.jpg`
   const sep = logoUrl.value.includes('?') ? '&' : '?'
   return `${logoUrl.value}${sep}v=${logoVer.value}`
 })
@@ -117,8 +120,8 @@ const saveProfile = async () => {
 const buildLogoUrl = (path) => {
   if (!path) return ''
   if (/^https?:\/\//i.test(path)) return path
-  const BASE = 'http://127.0.0.1:8000'
-  return new URL(path, BASE).href
+  const BASE = baseURL.replace('/api/', '')
+  return `${BASE}${path.startsWith('/') ? '' : '/'}${path}`
 }
 
 </script>
@@ -131,15 +134,15 @@ const buildLogoUrl = (path) => {
       <div class="flex items-center gap-3">
         <img
           :src="logoSrc"
-          @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+          @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
           class="w-8 h-8 rounded-lg object-contain shadow-sm"
           width="32" height="32"
           decoding="async"
           fetchpriority="high"
         />
         <div>
-          <h1 class="text-xl font-bold text-gray-800">⚙️ System Configuration</h1>
-          <p class="text-sm text-gray-600">Manage your POS system settings</p>
+          <h1 class="text-xl font-bold text-gray-800">⚙️ {{ t('navigation.systemConfiguration') }}</h1>
+          <p class="text-sm text-gray-600">{{ t('settings.title') }}</p>
         </div>
       </div>
       <button 
@@ -149,23 +152,27 @@ const buildLogoUrl = (path) => {
         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
         </svg>
-        Save Changes
+        {{ t('settings.saveChanges') }}
       </button>
     </div>
 
     <!-- Navigation Tabs -->
     <div class="flex border-b bg-white px-4">
       <button
-        v-for="(name, icon) in {'General': '🏪', 'Printer': '🖨️', 'Display': '📺'}"
-        :key="name"
-        @click="tab = name === 'General' ? 'Aplikasaun' : name === 'Display' ? 'Customer Display' : name"
+        v-for="(config, key) in {
+          'general': { name: t('settings.general'), icon: '🏪', value: 'Aplikasaun' },
+          'printer': { name: t('settings.printer'), icon: '🖨️', value: 'Printer' },
+          'display': { name: t('settings.display'), icon: '📺', value: 'Customer Display' }
+        }"
+        :key="key"
+        @click="tab = config.value"
         class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors"
-        :class="(tab === 'Aplikasaun' && name === 'General') || (tab === name) || (tab === 'Customer Display' && name === 'Display') 
+        :class="tab === config.value
           ? 'border-blue-500 text-blue-600 bg-blue-50' 
           : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
       >
-        <span class="text-lg">{{ icon }}</span>
-        {{ name }}
+        <span class="text-lg">{{ config.icon }}</span>
+        {{ config.name }}
       </button>
     </div>
 
@@ -182,8 +189,8 @@ const buildLogoUrl = (path) => {
                   <span class="text-blue-600 text-xl">🏪</span>
                 </div>
                 <div>
-                  <h3 class="text-lg font-semibold text-gray-900">Store Information</h3>
-                  <p class="text-sm text-gray-600">Basic store details and branding</p>
+                  <h3 class="text-lg font-semibold text-gray-900">{{ t('settings.storeInformation') }}</h3>
+                  <p class="text-sm text-gray-600">{{ t('settings.storeInformation') }}</p>
                 </div>
               </div>
               
@@ -191,7 +198,7 @@ const buildLogoUrl = (path) => {
               <div class="flex items-start gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                 <img
                   :src="logoSrc"
-                  @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+                  @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
                   class="w-20 h-20 border-2 border-gray-200 rounded-lg bg-white object-contain"
                   width="80" height="80"
                   loading="lazy"
@@ -199,10 +206,10 @@ const buildLogoUrl = (path) => {
                 />
                 <input ref="logoInput" type="file" accept="image/*" class="hidden" @change="onLogoSelected" />
                 <div class="flex-1">
-                  <h4 class="text-sm font-medium text-gray-900 mb-2">Store Logo</h4>
+                  <h4 class="text-sm font-medium text-gray-900 mb-2">Logo Loja</h4>
                   <div class="flex gap-2 mb-2">
-                    <button @click="triggerLogoPicker" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors">Change</button>
-                    <button @click="resetLogo" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors">Reset</button>
+                    <button @click="triggerLogoPicker" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors">{{ t('common.edit') }}</button>
+                    <button @click="resetLogo" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors">{{ t('common.reset') }}</button>
                   </div>
                   <p class="text-xs text-gray-500">Square logo recommended. Max size: 512x512px</p>
                 </div>
