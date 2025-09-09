@@ -305,25 +305,6 @@ const deletePurchase = async (purchase) => {
 }
 
 // Date filter functions
-const handleFilterChange = (e) => {
-  const value = e?.target?.value ?? ''
-  if (value === '') {
-    showDatePopup.value = true
-    datePickerMode.value = 'date'
-  } else if (value === 'today') {
-    const today = new Date().toISOString().slice(0, 10)
-    filter.value.tanggalAwal = today
-    filter.value.tanggalAkhir = today
-  }
-}
-
-const applyManualDateFilter = () => {
-  if (manualStart.value && manualEnd.value) {
-    filter.value.tanggalAwal = manualStart.value
-    filter.value.tanggalAkhir = manualEnd.value
-    showDatePopup.value = false
-  }
-}
 
 onMounted(async () => {
   await Promise.all([
@@ -458,7 +439,7 @@ onMounted(async () => {
 
         <div class="min-w-[160px]">
           <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-          <select @change="handleFilterChange($event)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <select @change="handleFilterChange('date', $event)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             <option :value="'today'">📅 Today</option>
             <option value="">🗓️ Custom Range</option>
           </select>
