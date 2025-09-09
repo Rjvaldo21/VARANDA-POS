@@ -43,6 +43,15 @@ const formatDate = (datetimeStr) => {
   })
 }
 
+const formatPrice = (value) => {
+  const number = Number(value)
+  return isNaN(number)
+    ? '$0.00'
+    : new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(number)
+}
 
 const startDate = ref('')
 const endDate   = ref('')
@@ -158,9 +167,77 @@ const todayOptionText = computed(() => {
 
 
 const refresh = () => {
-  // Placeholder untuk fetch list stock adjustment jika diperlukan
-  console.log('Refresh data stok...')
+  fetchAdjustments()
 }
+
+// New functions for improved UI
+const clearFilters = () => {
+  filter.value = {
+    tanggal_awal: '',
+    tanggal_akhir: '',
+    barcode: '',
+    nama: ''
+  }
+  startDate.value = ''
+  endDate.value = ''
+}
+
+const exportData = () => {
+  const headers = ['Adjustment Date','Product Name','Old Stock','New Stock','Difference','Reason','Adjusted By']
+  const csvData = items.value.map(item => [
+    formatDate(item.adjusted_at),
+    item.product_name || 'No name',
+    item.old_stock || 0,
+    item.new_stock || 0,
+    (item.new_stock || 0) - (item.old_stock || 0),
+    item.reason || 'No reason',
+    item.adjusted_by || 'Unknown'
+  ])
+  
+  const csv = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'inventory_adjustments_export.csv'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+const viewAdjustment = (item) => {
+  alert(`View adjustment details for: ${item?.product_name || 'Unknown Product'}`)
+}
+
+const editAdjustment = (item) => {
+  alert(`Edit adjustment for: ${item?.product_name || 'Unknown Product'}`)
+}
+
+const deleteAdjustment = async (item) => {
+  if (!confirm(`Are you sure you want to delete the adjustment for ${item?.product_name || 'this product'}?`)) return
+  
+  try {
+    await api.delete(`stock-adjustments/${item.id}/`)
+    await fetchAdjustments()
+    alert('Adjustment deleted successfully')
+  } catch (error) {
+    console.error('Error deleting adjustment:', error)
+    alert('Failed to delete adjustment')
+  }
+}
+
+// Summary computed properties
+const totalAdjustments = computed(() => items.value.length)
+const totalIncreases = computed(() => 
+  items.value.filter(item => (item.new_stock || 0) > (item.old_stock || 0)).length
+)
+const totalDecreases = computed(() => 
+  items.value.filter(item => (item.new_stock || 0) < (item.old_stock || 0)).length
+)
+const totalStockDifference = computed(() => 
+  items.value.reduce((sum, item) => sum + ((item.new_stock || 0) - (item.old_stock || 0)), 0)
+)
 
 // 🔹 Modal state
 const showModal = ref(false)
@@ -208,123 +285,348 @@ const submitForm = async () => {
 
 
 <template>
-  <div class="bg-white border border-gray-50 rounded-sm shadow text-sm flex flex-col h-full">
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm text-sm flex flex-col h-full">
     <!-- Header -->
-    <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
-      <img
-        :src="store.logo_base64 || getLogoUrl(store.logo)"
+    <div class="flex items-center justify-between p-4 border-b border-gray-300 bg-gradient-to-r from-purple-50 to-indigo-50">
+      <div class="flex items-center gap-3">
+        <img
+          :src="store.logo_base64 || getLogoUrl(store.logo)"
           @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
-        class="h-6 w-6 rounded"
-      />
-      <h1 class="text-lg font-semibold">HADIA STOK</h1>
-    </div>
-
-    <!-- Filter tanggal -->
-      <div class="flex items-center gap-2 p-2">
-        <div class="border rounded-sm px-2 py-1 w-48">
-          <select @change="handleFilterChange($event)" class="w-full outline-none">
-            <option value="today">{{ todayOptionText }}</option>
-            <option value="week">📈 Semana</option>
-            <option value="month">📆 Fulan</option>
-            <option value="">🗓️ Hili kalendariu</option>
-          </select>
+          class="h-8 w-8 rounded-lg shadow-sm"
+        />
+        <div>
+          <h1 class="text-xl font-bold text-gray-800">📊 Inventory Adjustments</h1>
+          <p class="text-sm text-gray-600">Track and manage stock adjustments</p>
         </div>
       </div>
+      <div class="flex items-center gap-2">
+        <button @click="addItem" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-sm transition-colors">
+          <span class="text-sm font-medium">📝 New Adjustment</span>
+        </button>
+      </div>
+    </div>
 
-      <!-- Popup kalender -->
-      <div v-if="showDatePopup" class="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
-        <div class="bg-white shadow border p-5 rounded w-[300px]">
-          <div class="text-sm font-semibold mb-3">🛠️ Atur Rentang Tanggal</div>
-          <label class="block text-xs mb-1">Data Inisiu</label>
-          <input type="date" v-model="manualStart" class="border rounded px-2 py-1 w-full mb-2" />
-          <label class="block text-xs mb-1">Data Final</label>
-          <input type="date" v-model="manualEnd" class="border rounded px-2 py-1 w-full mb-4" />
-          <div class="flex justify-end gap-2 text-xs">
-            <button @click="showDatePopup = false" class="px-2 py-1 border rounded">Kansela</button>
-            <button @click="applyManualDateFilter" class="px-2 py-1 border rounded text-blue-600">Ok</button>
+    <!-- Summary Cards -->
+    <div class="p-4 bg-gray-50 border-b border-gray-200">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Total Adjustments Card -->
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-blue-600">Total Adjustments</p>
+              <p class="text-xl font-bold text-blue-800">{{ totalAdjustments }}</p>
+            </div>
+            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span class="text-blue-600 text-lg">📝</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Stock Increases Card -->
+        <div class="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-green-600">Stock Increases</p>
+              <p class="text-xl font-bold text-green-800">{{ totalIncreases }}</p>
+            </div>
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <span class="text-green-600 text-lg">📈</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stock Decreases Card -->
+        <div class="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-red-600">Stock Decreases</p>
+              <p class="text-xl font-bold text-red-800">{{ totalDecreases }}</p>
+            </div>
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <span class="text-red-600 text-lg">📉</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Net Stock Change Card -->
+        <div class="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-yellow-600">Net Change</p>
+              <p class="text-xl font-bold" :class="totalStockDifference >= 0 ? 'text-green-800' : 'text-red-800'">{{ totalStockDifference >= 0 ? '+' : '' }}{{ totalStockDifference }}</p>
+            </div>
+            <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+              <span class="text-yellow-600 text-lg">⚖️</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="p-4 bg-white border-b border-gray-200">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Search by Product</label>
+          <input 
+            v-model="filter.nama" 
+            type="text" 
+            placeholder="Enter product name..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
+        </div>
+        
+        <div class="min-w-[160px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+          <select @change="handleFilterChange($event)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+            <option value="today">📅 Today</option>
+            <option value="week">📈 This Week</option>
+            <option value="month">📆 This Month</option>
+            <option value="">🗓️ Custom Range</option>
+          </select>
+        </div>
+
+        <div class="flex items-end gap-2">
+          <button @click="clearFilters" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Clear Filters
+          </button>
+          <button @click="exportData" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
+            📊 Export
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="p-4 flex flex-col flex-1 overflow-hidden">
+
+      <!-- Custom Date Range Modal -->
+      <div v-if="showDatePopup" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div class="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Select Date Range</h3>
+            <button @click="showDatePopup = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="p-6">
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input 
+                  v-model="manualStart" 
+                  type="date" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input 
+                  v-model="manualEnd" 
+                  type="date" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-end p-6 border-t border-gray-200 space-x-3">
+            <button 
+              @click="showDatePopup = false" 
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="applyManualDateFilter" 
+              class="px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+            >
+              Apply Filter
+            </button>
           </div>
         </div>
       </div>
 
-    <!-- Table -->
-    <div class="p-2 flex flex-col flex-1 overflow-hidden">
-      <div class="flex-1 overflow-auto border border-gray-300">
-        <table class="w-full table-auto border-collapse text-sm">
-          <thead class="bg-gradient-to-b from-white to-gray-100">
-          <tr>
-            <th class="border px-2 py-1">Produtu</th>
-            <th class="border px-2 py-1 text-right">Stok Antes</th>
-            <th class="border px-2 py-1 text-right">Stok Foun</th>
-            <th class="border px-2 py-1">Razaun</th>
-            <th class="border px-2 py-1">Adjusted by</th>
-            <th class="border px-2 py-1">Adjusted at</th>
-          </tr>
-        </thead>
-          <tbody>
-            <tr v-for="item in items" :key="item.id" class="hover:bg-gray-50">
-              <td class="border px-2 py-1">
-                {{ item.product_name }}
-              </td>
-              <td class="border px-2 py-1 text-right">
-                {{ item.old_stock }}
-              </td>
-              <td class="border px-2 py-1 text-right">
-                {{ item.new_stock }}
-              </td>
-              <td class="border px-2 py-1">
-                {{ item.reason }}
-              </td>
-              <td class="border px-2 py-1">
-                {{ item.adjusted_by }}
-              </td>
-              <td class="border px-2 py-1">
-                {{ formatDate(item.adjusted_at) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Table -->
+      <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse">
+            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Old Stock</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">New Stock</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Difference</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Reason</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Adjusted By</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-gray-200">
+              <tr v-if="items.length === 0">
+                <td colspan="8" class="px-4 py-12 text-center text-gray-500">
+                  <div class="flex flex-col items-center">
+                    <span class="text-4xl mb-2">📝</span>
+                    <p class="text-lg font-medium mb-1">No adjustments found</p>
+                    <p class="text-sm">Try adjusting your filters or create a new adjustment</p>
+                  </div>
+                </td>
+              </tr>
+              
+              <tr v-else v-for="item in items" :key="item.id" class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div>
+                      <div class="text-sm font-medium text-gray-900">{{ item.product_name || 'No name' }}</div>
+                      <div class="text-xs text-gray-500">ID: {{ item.id }}</div>
+                    </div>
+                  </div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <div class="text-sm font-bold text-gray-900">{{ item.old_stock || 0 }}</div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <div class="text-sm font-bold text-gray-900">{{ item.new_stock || 0 }}</div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <span 
+                    class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+                    :class="{
+                      'bg-green-100 text-green-800': (item.new_stock || 0) > (item.old_stock || 0),
+                      'bg-red-100 text-red-800': (item.new_stock || 0) < (item.old_stock || 0),
+                      'bg-gray-100 text-gray-800': (item.new_stock || 0) === (item.old_stock || 0)
+                    }"
+                  >
+                    {{ ((item.new_stock || 0) > (item.old_stock || 0) ? '+' : '') + ((item.new_stock || 0) - (item.old_stock || 0)) }}
+                  </span>
+                </td>
+                
+                <td class="px-4 py-4">
+                  <div class="text-sm text-gray-900 max-w-xs truncate" :title="item.reason">
+                    {{ item.reason || 'No reason provided' }}
+                  </div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ item.adjusted_by || 'Unknown' }}</div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ formatDate(item.adjusted_at) }}</div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <div class="flex items-center justify-center space-x-2">
+                    <button 
+                      @click="viewAdjustment(item)"
+                      class="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                      title="View Details"
+                    >
+                      👁️
+                    </button>
+                    <button 
+                      @click="editAdjustment(item)"
+                      class="text-yellow-600 hover:text-yellow-800 font-medium text-sm"
+                      title="Edit"
+                    >
+                      ✏️
+                    </button>
+                    <button 
+                      @click="deleteAdjustment(item)"
+                      class="text-red-600 hover:text-red-800 font-medium text-sm"
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <!-- Footer -->
-      <div class="flex justify-between items-center mt-2 text-xs">
-        <div>
-          <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
-            <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
+      <!-- Pagination Footer -->
+      <div class="flex justify-between items-center mt-4 px-4 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-700">Show:</span>
+          <select v-model="perPage" class="px-2 py-1 border border-gray-300 rounded-md text-sm">
+            <option v-for="n in [10, 20, 50, 100]" :key="n" :value="n">{{ n }} per page</option>
           </select>
         </div>
-        <div class="space-x-2 text-base">
-          <button @click="refresh" class="hover:text-blue-600">🔄</button>
-          <button @click="addItem" class="hover:text-green-600">➕</button>
+        <div class="text-sm text-gray-700">
+          Showing {{ items.length }} adjustment{{ items.length !== 1 ? 's' : '' }}
         </div>
       </div>
     </div>
 
-    <!-- 🔶 Modal Input -->
-    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-      <div class="bg-white p-4 rounded shadow-md w-[350px] space-y-3">
-        <h2 class="text-lg font-bold">Tambah Penyesuaian Stok</h2>
-
-        <div>
-          <label class="block text-sm">Produk *</label>
-          <select v-model="form.product" class="border w-full px-2 py-1 rounded">
-            <option value="">Pilih produk</option>
-            <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} - {{ p.sku }}</option>
-          </select>
+    <!-- New Adjustment Modal -->
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">📝 New Stock Adjustment</h3>
+          <button @click="showModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
         </div>
+        
+        <div class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Product *</label>
+              <select v-model="form.product" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                <option value="">Select a product...</option>
+                <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }} - {{ p.sku }}</option>
+              </select>
+            </div>
 
-        <div>
-          <label class="block text-sm">Stok Baru *</label>
-          <input v-model="form.new_stock" type="number" class="border w-full px-2 py-1 rounded" />
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">New Stock Quantity *</label>
+              <input 
+                v-model="form.new_stock" 
+                type="number" 
+                min="0" 
+                placeholder="Enter new stock quantity..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Adjustment Reason *</label>
+              <textarea 
+                v-model="form.reason" 
+                rows="3" 
+                placeholder="Explain the reason for this stock adjustment..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              ></textarea>
+            </div>
+          </div>
         </div>
-
-        <div>
-          <label class="block text-sm">Alasan *</label>
-          <textarea v-model="form.reason" rows="2" class="border w-full px-2 py-1 rounded"></textarea>
-        </div>
-
-        <div class="flex justify-end space-x-2 mt-3">
-          <button @click="showModal = false" class="px-3 py-1 border rounded text-gray-600 hover:bg-gray-100">Batal</button>
-          <button @click="submitForm" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Simpan</button>
+        
+        <div class="flex items-center justify-end p-6 border-t border-gray-200 space-x-3">
+          <button 
+            @click="showModal = false" 
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            @click="submitForm" 
+            class="px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+            :disabled="!form.product || !form.new_stock || !form.reason"
+          >
+            Save Adjustment
+          </button>
         </div>
       </div>
     </div>
@@ -333,10 +635,52 @@ const submitForm = async () => {
 </template>
 
 <style scoped>
+/* Modern utility styles */
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-shadow {
+  transition-property: box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Custom focus states */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+  --tw-ring-color: rgb(147 51 234 / 0.5);
+  border-color: transparent;
+}
+
+/* Table improvements */
 table {
   border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
 }
-th, td {
-  font-size: 13px;
+
+/* Hover effects */
+.hover\:shadow-md:hover {
+  --tw-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+/* Disabled button styles */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  background-color: initial;
 }
 </style>
