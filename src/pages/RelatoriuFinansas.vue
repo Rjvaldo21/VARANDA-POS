@@ -158,150 +158,353 @@ const showDatePopup = ref(false)
 const manualStart = ref('')
 const manualEnd = ref('')
 
+// New UI functions
+const clearFilters = () => {
+  filter.value = {
+    tipe: '',
+    nomor: '',
+    banku: '',
+    mesin: '',
+    pengguna: '',
+    detil: ''
+  }
+  startDate.value = ''
+  endDate.value = ''
+}
+
+const exportData = () => {
+  const headers = ['Date','Type','Number','Bank','Computer','User','Details','Amount']
+  const csvData = filteredRows.value.map(row => [
+    row.entry_date || '',
+    row.entry_type || '',
+    row.number || '',
+    'N/A', // Bank info not available
+    'N/A', // Computer info not available  
+    'N/A', // User info not available
+    row.note || '',
+    row.amount_signed || 0
+  ])
+  
+  const csv = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'finance_report.csv'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+const viewEntry = (entry) => {
+  alert(`View finance entry details for: ${entry?.number || 'Unknown Entry'}`)
+}
+
+const editEntry = (entry) => {
+  alert(`Edit finance entry: ${entry?.number || 'Unknown Entry'}`)
+}
+
+// Summary computed properties
+const totalEntries = computed(() => filteredRows.value.length)
+const totalIncome = computed(() => 
+  filteredRows.value
+    .filter(r => Number(r.amount_signed) > 0)
+    .reduce((sum, r) => sum + Number(r.amount_signed), 0)
+)
+const totalExpenses = computed(() => 
+  filteredRows.value
+    .filter(r => Number(r.amount_signed) < 0)
+    .reduce((sum, r) => sum + Math.abs(Number(r.amount_signed)), 0)
+)
+const netBalance = computed(() => totalIncome.value - totalExpenses.value)
+
 </script>
 
 
 <template>
   <div
-    class="bg-white border border-gray-50 rounded-sm shadow text-sm flex flex-col h-full"
+    class="bg-white border border-gray-200 rounded-lg shadow-sm text-sm flex flex-col h-full"
     v-bind="$attrs"
   >
     <!-- Header -->
-    <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
-      <img
-        :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
-        class="h-6 w-6 rounded"
-      />
-      <h1 class="text-lg font-semibold">RELATORIU FINANSAS</h1>
-    </div>
-
-    <!-- ✅ Total Box -->
-    <div class="px-2 pt-2 pb-1 w-[150px]">
-      <div class="border rounded-sm px-3 py-2 w-full text-right">
-        <div class="text-xs text-gray-500 text-left">Total</div>
-        <div class="text-lg font-bold">{{ formatPrice(totalNet) }}</div>
+    <div class="flex items-center justify-between p-4 border-b border-gray-300 bg-gradient-to-r from-emerald-50 to-teal-50">
+      <div class="flex items-center gap-3">
+        <img
+          :src="store.logo_base64 || getLogoUrl(store.logo)"
+          @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
+          class="h-8 w-8 rounded-lg shadow-sm"
+        />
+        <div>
+          <h1 class="text-xl font-bold text-gray-800">💰 Finance Report</h1>
+          <p class="text-sm text-gray-600">Financial entries and account summary</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button @click="exportData" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm transition-colors">
+          <span class="text-sm font-medium">📊 Export Report</span>
+        </button>
       </div>
     </div>
 
-    <!-- Table -->
-    <div class="p-2 flex flex-col flex-1 overflow-hidden">
-      <div class="flex-1 overflow-auto border border-gray-300">
-        <table class="w-full table-fixed border-collapse text-sm">
-          <thead class="bg-gradient-to-b from-white to-gray-100">
-            <!-- Header -->
-            <tr>
-              <th class="th w-48 text-left">Data</th>
-              <th class="th w-32 text-left">Tipu</th>
-              <th class="th w-32 text-left">Numeru</th>
-              <th class="th w-28 text-left">Banku</th>
-              <th class="th w-28 text-left">Komputador</th>
-              <th class="th w-32 text-left">Uzuariu</th>
-              <th class="th w-[140px] text-left">Detalle</th>
-              <th class="th w-[500px] text-right">Total</th>
-            </tr>
-
-            <!-- Filter -->
-            <tr>
-              <!-- Data -->
-              <th class="th align-top">
-                <div class="flex flex-col gap-1 w-full">
-                  <select @change="handleFilterChange($event)" class="border px-2 py-1 text-sm rounded-sm w-full">
-                    <option :value="'today'">📅 {{ todayFormatted }}</option>
-                    <option value="">🗓️ Hili kalendariu</option>
-                  </select>
-                </div>
-              </th>
-
-              <!-- Tipu -->
-              <th class="th">
-                <select v-model="filter.tipe" class="border px-2 py-1 rounded-sm w-full text-sm">
-                  <option value="">Kompletu</option>
-                  <option value="masuk">Tama</option>
-                  <option value="keluar">Sai</option>
-                </select>
-              </th>
-
-              <th class="th">
-                <input v-model="filter.nomor" placeholder="Numeru" class="border px-2 py-1 rounded-sm w-full text-sm" />
-              </th>
-
-              <th class="th">
-                <select v-model="filter.banku" class="border px-2 py-1 rounded-sm w-full text-sm">
-                  <option value="">Kompletu</option>
-                  <option value="BNCTL">BNCTL</option>
-                  <option value="MANDIRI">MANDIRI</option>
-                  <option value="BNU">BNU</option>
-                </select>
-              </th>
-
-              <th class="th">
-                <input v-model="filter.mesin" placeholder="Komputador" class="border px-2 py-1 rounded-sm w-full text-sm" />
-              </th>
-
-              <th class="th">
-                <input v-model="filter.pengguna" placeholder="Uzuariu" class="border px-2 py-1 rounded-sm w-full text-sm" />
-              </th>
-
-              <th class="th">
-                <input v-model="filter.detil" placeholder="Detalle" class="border px-2 py-1 rounded-sm w-full text-sm" />
-              </th>
-
-              <th class="th text-center text-gray-400">Otomatika</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr v-if="filteredRows.length === 0">
-            </tr>
-
-            <tr v-for="(r, i) in filteredRows" :key="i" class="hover:bg-gray-50">
-              <td class="td">{{ r.entry_date }}</td>
-              <td class="td">{{ r.entry_type }}</td>
-              <td class="td">{{ r.number || '' }}</td>
-              <td class="td">—</td>
-              <td class="td">—</td>
-              <td class="td">—</td>
-              <td class="td">{{ r.note || '-' }}</td>
-              <td class="td text-right" :class="Number(r.amount_signed) >= 0 ? 'text-green-600' : 'text-red-600'">
-                {{ formatPrice(r.amount_signed) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      
-      <!-- 📅 Popup Kalender Manual -->
-        <div v-if="showDatePopup" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white rounded shadow-md p-4 w-[300px] text-sm space-y-3">
-            <div class="text-base font-semibold mb-1">Hili Data Manual</div>
-
-            <div class="flex flex-col gap-1">
-              <label for="start">Tinan Inisiu</label>
-              <input id="start" v-model="manualStart" type="datetime-local" class="input" />
-
-              <label for="end">Tinan Remata</label>
-              <input id="end" v-model="manualEnd" type="datetime-local" class="input" />
+    <!-- Summary Cards -->
+    <div class="p-4 bg-gray-50 border-b border-gray-200">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Total Entries Card -->
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-blue-600">Total Entries</p>
+              <p class="text-xl font-bold text-blue-800">{{ totalEntries }}</p>
             </div>
-
-            <div class="flex justify-end gap-2 pt-2">
-              <button @click="showDatePopup = false" class="px-3 py-1 text-gray-600 hover:underline">Taka</button>
-              <button @click="applyManualDateFilter" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded">
-                Aplika
-              </button>
+            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span class="text-blue-600 text-lg">📝</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Total Income Card -->
+        <div class="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-green-600">Total Income</p>
+              <p class="text-xl font-bold text-green-800">{{ formatPrice(totalIncome) }}</p>
+            </div>
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <span class="text-green-600 text-lg">📈</span>
             </div>
           </div>
         </div>
 
-      <!-- Footer -->
-      <div class="flex justify-between items-center mt-2 text-xs">
-        <div>
-          <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
-            <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
+        <!-- Total Expenses Card -->
+        <div class="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-red-600">Total Expenses</p>
+              <p class="text-xl font-bold text-red-800">{{ formatPrice(totalExpenses) }}</p>
+            </div>
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <span class="text-red-600 text-lg">📉</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Net Balance Card -->
+        <div class="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-purple-600">Net Balance</p>
+              <p class="text-xl font-bold" :class="netBalance >= 0 ? 'text-green-800' : 'text-red-800'">
+                {{ formatPrice(netBalance) }}
+              </p>
+            </div>
+            <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <span class="text-purple-600 text-lg">⚖️</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="p-4 bg-white border-b border-gray-200">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="min-w-[160px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+          <select @change="handleFilterChange($event)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+            <option value="today">📅 Today</option>
+            <option value="">🗓️ Custom Range</option>
           </select>
         </div>
-        <div class="space-x-2 text-base">
-          <button class="hover:text-blue-600">🔄</button>
+        
+        <div class="min-w-[140px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Entry Type</label>
+          <select v-model="filter.tipe" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+            <option value="">All Types</option>
+            <option value="masuk">Income</option>
+            <option value="keluar">Expense</option>
+          </select>
+        </div>
+        
+        <div class="min-w-[160px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Entry Number</label>
+          <input 
+            v-model="filter.nomor" 
+            type="text" 
+            placeholder="Enter number..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
+        
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Search Details</label>
+          <input 
+            v-model="filter.detil" 
+            type="text" 
+            placeholder="Enter details..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
+        </div>
+
+        <div class="flex items-end gap-2">
+          <button @click="clearFilters" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Clear Filters
+          </button>
+          <button @click="refresh" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
+            🔄 Refresh
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="p-4 flex flex-col flex-1 overflow-hidden">
+
+      <!-- Table -->
+      <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse">
+            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Number</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Details</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Amount</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-gray-200">
+              <tr v-if="filteredRows.length === 0">
+                <td colspan="6" class="px-4 py-12 text-center text-gray-500">
+                  <div class="flex flex-col items-center">
+                    <span class="text-4xl mb-2">💰</span>
+                    <p class="text-lg font-medium mb-1">No finance entries found</p>
+                    <p class="text-sm">Try adjusting your date range or filters</p>
+                  </div>
+                </td>
+              </tr>
+
+              <tr v-else v-for="(r, i) in filteredRows" :key="i" class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ r.entry_date || 'N/A' }}</div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <span 
+                    class="inline-flex px-2 py-1 text-xs font-medium rounded-full"
+                    :class="{
+                      'bg-green-100 text-green-800': r.entry_type?.toLowerCase() === 'income' || Number(r.amount_signed) > 0,
+                      'bg-red-100 text-red-800': r.entry_type?.toLowerCase() === 'expense' || Number(r.amount_signed) < 0,
+                      'bg-gray-100 text-gray-800': !r.entry_type
+                    }"
+                  >
+                    {{ r.entry_type || 'Unknown' }}
+                  </span>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">{{ r.number || 'N/A' }}</div>
+                </td>
+                
+                <td class="px-4 py-4">
+                  <div class="text-sm text-gray-900 max-w-xs truncate" :title="r.note">
+                    {{ r.note || 'No details' }}
+                  </div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-right">
+                  <div class="text-sm font-bold" 
+                       :class="Number(r.amount_signed) >= 0 ? 'text-green-600' : 'text-red-600'">
+                    {{ formatPrice(r.amount_signed) }}
+                  </div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <div class="flex items-center justify-center space-x-2">
+                    <button 
+                      @click="viewEntry(r)"
+                      class="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                      title="View Details"
+                    >
+                      👁️
+                    </button>
+                    <button 
+                      @click="editEntry(r)"
+                      class="text-yellow-600 hover:text-yellow-800 font-medium text-sm"
+                      title="Edit Entry"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Custom Date Range Modal -->
+      <div v-if="showDatePopup" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div class="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Select Date Range</h3>
+            <button @click="showDatePopup = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="p-6">
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input 
+                  v-model="manualStart" 
+                  type="datetime-local" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input 
+                  v-model="manualEnd" 
+                  type="datetime-local" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" 
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-end p-6 border-t border-gray-200 space-x-3">
+            <button 
+              @click="showDatePopup = false" 
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="applyManualDateFilter" 
+              class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors"
+            >
+              Apply Filter
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination Footer -->
+      <div class="flex justify-between items-center mt-4 px-4 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-700">Show:</span>
+          <select v-model="perPage" class="px-2 py-1 border border-gray-300 rounded-md text-sm">
+            <option v-for="n in [10, 20, 50, 100]" :key="n" :value="n">{{ n }} per page</option>
+          </select>
+        </div>
+        <div class="text-sm text-gray-700">
+          Showing {{ filteredRows.length }} entr{{ filteredRows.length !== 1 ? 'ies' : 'y' }}
         </div>
       </div>
     </div>
@@ -310,34 +513,41 @@ const manualEnd = ref('')
 </template>
 
 <style scoped>
-.input {
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  width: 100%;
-  font-size: 12px;
-}
-.th {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: center;
-  font-weight: 600;
+/* Modern utility styles */
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
-th,
-td {
-  font-size: 13px;
-  padding: 6px 8px;
-  border: 1px solid #d1d5db;
+.transition-shadow {
+  transition-property: box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
-.th {
-  text-align: left;
-  background: #f9fafb;
-  font-weight: bold;
-  white-space: normal;
-  word-break: break-word;
+
+/* Custom focus states */
+input:focus,
+select:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+  --tw-ring-color: rgb(16 185 129 / 0.5);
+  border-color: transparent;
 }
-.td {
-  font-size: 13px;
+
+/* Table improvements */
+table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hover effects */
+.hover\:shadow-md:hover {
+  --tw-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 </style>
