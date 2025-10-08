@@ -7,7 +7,11 @@
   "author": "Nelfarinaunipessoal.lda",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev": "node dev.js",
+    "dev:old": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:full": "node start-dev.js",
+    "vite": "vite",
+    "electron": "electron .",
     "build": "vite build",
     "electron:build": "npm run build && electron-builder",
     "preview": "vite preview",
