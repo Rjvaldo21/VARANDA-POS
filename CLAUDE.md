@@ -34,6 +34,14 @@ VARANDA-POS is a desktop Point of Sale application built with:
 npm run dev
 # Starts Vite dev server and Electron app with embedded Django backend
 # This is the primary development command
+# Works on Windows, Mac, and Linux with automatic venv detection
+```
+
+**Cross-Platform Setup:**
+```bash
+npm run setup         # Complete setup (frontend + backend venv)
+npm run setup-backend # Setup backend virtual environment only
+npm run clean         # Remove all virtual environments
 ```
 
 **Backend Only (Manual):**
@@ -121,6 +129,28 @@ No specific testing framework is configured. When adding tests, check existing p
 - Database location handled differently in development vs production
 - Multiple platform build targets supported (Windows, macOS, Linux)
 - API timeout configured for slower networks (30s default)
+
+## Cross-Platform Virtual Environment Support
+
+The application automatically detects the OS and uses the appropriate Python virtual environment:
+
+**Virtual Environment Detection Priority:**
+- **Windows**: `backend/venv/Scripts/python.exe` → system python
+- **macOS**: `backend/venv_mac/bin/python` → `backend/venv/bin/python` → system python3  
+- **Linux**: `backend/venv/bin/python` → system python3
+
+**Setup Commands:**
+- `npm run setup` - Complete cross-platform setup
+- `npm run setup-backend` - Backend virtual environment only
+- `npm run backend:start` - Start Django server manually
+- `npm run clean` - Remove all virtual environments
+
+**Auto-Generated Scripts:**
+- Windows: `backend/start_backend.bat`
+- Mac/Linux: `backend/start_backend.sh`
+- Info file: `backend/VENV_INFO.md`
+
+The Electron main process (`electron/main.cjs`) includes `getPythonPath()` function that automatically detects and uses the correct Python executable based on the operating system.
 
 ## Application Modules & Save Functionality Checklist
 

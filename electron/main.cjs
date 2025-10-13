@@ -32,20 +32,64 @@ function prepareDatabase() {
   return userDbPath
 }
 
+function getPythonPath(basePath, isProd) {
+  if (isProd) {
+    // Production: Use bundled Python
+    return process.platform === 'win32' 
+      ? path.join(process.resourcesPath, 'backend', 'python', 'python.exe')
+      : path.join(process.resourcesPath, 'backend', 'python', 'python3')
+  } else {
+    // Development: Auto-detect virtual environment
+    const isWindows = process.platform === 'win32'
+    const isDarwin = process.platform === 'darwin'
+    
+    // Try different virtual environment paths in order of preference
+    const venvPaths = isWindows 
+      ? [
+          path.join(basePath, 'venv', 'Scripts', 'python.exe'),
+          path.join(basePath, 'env', 'Scripts', 'python.exe'),
+          'python.exe',
+          'python'
+        ]
+      : [
+          path.join(basePath, 'venv_mac', 'bin', 'python'),
+          path.join(basePath, 'venv', 'bin', 'python'),
+          path.join(basePath, 'env', 'bin', 'python'),
+          'python3',
+          'python'
+        ]
+    
+    // Check which Python path exists and is executable
+    for (const pythonPath of venvPaths) {
+      try {
+        if (path.isAbsolute(pythonPath)) {
+          if (fs.existsSync(pythonPath)) {
+            console.log(`✅ Found Python at: ${pythonPath}`)
+            return pythonPath
+          }
+        } else {
+          // For system Python, we'll try it anyway
+          console.log(`🔄 Trying system Python: ${pythonPath}`)
+          return pythonPath
+        }
+      } catch (error) {
+        console.log(`❌ Python path not found: ${pythonPath}`)
+      }
+    }
+    
+    // Fallback to system Python
+    console.log('⚠️ No virtual environment found, using system Python')
+    return isWindows ? 'python.exe' : 'python3'
+  }
+}
+
 function startDjangoServer() {
   const isProd = app.isPackaged
   const basePath = isProd
     ? path.join(process.resourcesPath, 'backend')
     : path.join(__dirname, '../backend')
 
-  // Fix Python path for different platforms
-  const pythonPath = isProd
-    ? (process.platform === 'win32' 
-       ? path.join(process.resourcesPath, 'backend', 'python', 'python.exe')
-       : path.join(process.resourcesPath, 'backend', 'python', 'python3'))
-    : (process.platform === 'win32'
-       ? path.join(basePath, 'venv', 'Scripts', 'python.exe')
-       : path.join(basePath, 'venv_mac', 'bin', 'python')) // Use venv Python for development
+  const pythonPath = getPythonPath(basePath, isProd)
   const managePyPath = path.join(basePath, 'manage.py')
   const userDbPath = prepareDatabase()  
 

@@ -15,7 +15,11 @@
     "build": "vite build",
     "electron:build": "npm run build && electron-builder",
     "preview": "vite preview",
-    "tw-init": "tailwindcss init -p"
+    "tw-init": "tailwindcss init -p",
+    "setup-backend": "node backend/setup_venv.js",
+    "setup": "npm install && npm run setup-backend",
+    "backend:start": "node -e \"const os = require('os'); const path = require('path'); const { spawn } = require('child_process'); const isWindows = os.platform() === 'win32'; const scriptPath = isWindows ? path.join('backend', 'start_backend.bat') : path.join('backend', 'start_backend.sh'); const cmd = spawn(scriptPath, [], { stdio: 'inherit', shell: isWindows }); cmd.on('error', console.error);\"",
+    "clean": "node -e \"const fs = require('fs'); const path = require('path'); ['backend/venv', 'backend/venv_mac', 'backend/env'].forEach(dir => { try { fs.rmSync(dir, {recursive: true, force: true}); console.log('Removed:', dir); } catch(e) { console.log('Not found:', dir); } });\""
   },
   "dependencies": {
     "axios": "^1.10.0",
