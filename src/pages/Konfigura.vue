@@ -49,9 +49,52 @@ const resetLogo = () => {
 const onLogoSelected = (event) => {
   const file = event.target.files[0]
   if (file) {
-    selectedLogoFile.value = file
-    logoUrl.value = URL.createObjectURL(file)
-    logoVer.value = Date.now()
+    // File validation
+    const maxSize = 5 * 1024 * 1024 // 5MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+    
+    console.log('📸 Selected file:', {
+      name: file.name,
+      size: file.size,
+      type: file.type
+    })
+    
+    // Check file size
+    if (file.size > maxSize) {
+      alert('❌ File too large! Please select an image smaller than 5MB.')
+      event.target.value = '' // Clear the input
+      return
+    }
+    
+    // Check file type
+    if (!allowedTypes.includes(file.type)) {
+      alert('❌ Invalid file type! Please select a valid image file (JPG, PNG, GIF, WebP).')
+      event.target.value = '' // Clear the input
+      return
+    }
+    
+    // Check if it's actually an image by trying to load it
+    const img = new Image()
+    img.onload = () => {
+      console.log('✅ Valid image file:', {
+        width: img.width,
+        height: img.height,
+        name: file.name,
+        size: file.size
+      })
+      
+      selectedLogoFile.value = file
+      logoUrl.value = URL.createObjectURL(file)
+      logoVer.value = Date.now()
+    }
+    
+    img.onerror = () => {
+      console.error('❌ Invalid image file')
+      alert('❌ Invalid image file! Please select a valid image.')
+      event.target.value = '' // Clear the input
+    }
+    
+    img.src = URL.createObjectURL(file)
   }
 }
 
@@ -87,33 +130,121 @@ onMounted(() => {
   fetchLocations()
 })
 
+const saving = ref(false)
+
 const saveProfile = async () => {
+  // Enhanced validation
+  if (!storeName.value || storeName.value.trim() === '') {
+    alert('⚠️ Store name is required!')
+    return
+  }
+
+  saving.value = true
   try {
+    console.log('🔄 Saving store profile...')
+    
+    // Get current store profile
     const res = await api.get('store-profile/')
     const data = res.data
+    
+    // Create FormData for multipart upload
     const formData = new FormData()
-
-    formData.append('name', storeName.value)
-    formData.append('address', storeAddress.value)
-    formData.append('location', storeLocation.value)
-    formData.append('version', storeVersion.value)
+    formData.append('name', storeName.value.trim())
+    formData.append('address', storeAddress.value.trim())
+    formData.append('location', storeLocation.value.trim())
+    formData.append('version', storeVersion.value.trim())
+    
+    // Add logo file if selected
     if (selectedLogoFile.value) {
-      formData.append('logo', selectedLogoFile.value)
+      console.log('📸 Adding logo file to upload:', {
+        name: selectedLogoFile.value.name,
+        size: selectedLogoFile.value.size,
+        type: selectedLogoFile.value.type,
+        lastModified: selectedLogoFile.value.lastModified
+      })
+      
+      // Ensure the file is properly appended
+      formData.append('logo', selectedLogoFile.value, selectedLogoFile.value.name)
+      
+      // Verify the file was added to FormData
+      console.log('📸 File added to FormData:', formData.has('logo'))
     }
 
+    console.log('📦 FormData contents:')
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: ${value.name} (${value.size} bytes)`)
+      } else {
+        console.log(`  ${key}: ${value}`)
+      }
+    }
+
+    let response
     if (Array.isArray(data) && data.length > 0) {
+      // Update existing profile
       const id = data[0].id
-      await api.put(`store-profile/${id}/`, formData)
+      console.log(`🔄 Updating store profile ID: ${id}`)
+      response = await api.put(`store-profile/${id}/`, formData)
     } else {
-      await api.post('store-profile/', formData)
+      // Create new profile
+      console.log('🔄 Creating new store profile')
+      response = await api.post('store-profile/', formData)
     }
 
+    console.log('✅ Store profile saved successfully')
+    
+    // Reset selected file after successful save
+    selectedLogoFile.value = null
+    
+    // Refresh profile data
     await fetchStoreProfile()
 
-    alert('Store profile saved!')
+    alert('✅ Store profile saved successfully!')
+    
   } catch (error) {
-    console.error('Gagal simpan profil:', error)
-    alert('Gagal simpan profil.')
+    console.error('❌ Failed to save store profile:', error)
+    
+    let errorMessage = 'Failed to save store profile.'
+    
+    if (error.response) {
+      const { status, data } = error.response
+      console.error('🚫 Server error details:', { status, data })
+      
+      if (status === 400 && data) {
+        // Handle validation errors
+        const validationErrors = []
+        for (const [field, errors] of Object.entries(data)) {
+          if (Array.isArray(errors)) {
+            validationErrors.push(`${field}: ${errors.join(', ')}`)
+          } else {
+            validationErrors.push(`${field}: ${errors}`)
+          }
+        }
+        if (validationErrors.length > 0) {
+          errorMessage = `Validation errors:\n${validationErrors.join('\n')}`
+        }
+      } else if (status === 413) {
+        errorMessage = 'File too large. Please select a smaller image.'
+      } else if (status === 415) {
+        errorMessage = 'Unsupported file type. Please select a valid image file (JPG, PNG).'
+      } else if (status === 401) {
+        errorMessage = 'Authentication failed. Please login again.'
+      } else if (status === 403) {
+        errorMessage = 'Permission denied. You do not have access to perform this action.'
+      } else if (status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
+      } else {
+        errorMessage = `Error (${status}): ${data?.detail || data?.message || 'Unknown error'}`
+      }
+    } else if (error.request) {
+      errorMessage = 'Network error. Please check your connection and try again.'
+    } else {
+      errorMessage = `Unexpected error: ${error.message}`
+    }
+    
+    alert(`❌ ${errorMessage}`)
+  } finally {
+    saving.value = false
   }
 }
 
@@ -147,12 +278,20 @@ const buildLogoUrl = (path) => {
       </div>
       <button 
         @click="saveProfile" 
-        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+        :disabled="saving"
+        class="px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors flex items-center"
+        :class="saving 
+          ? 'bg-gray-400 cursor-not-allowed' 
+          : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'"
       >
-        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg v-if="saving" class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <svg v-else class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
         </svg>
-        {{ t('settings.saveChanges') }}
+        {{ saving ? 'Saving...' : t('settings.saveChanges') }}
       </button>
     </div>
 

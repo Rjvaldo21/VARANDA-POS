@@ -65,18 +65,27 @@ const formatDecimal = (field) => {
 }
 
 const fetchDropdownData = async () => {
-  const token = localStorage.getItem('token')
   try {
+    console.log('🔄 Loading dropdown data...')
     const [catRes, unitRes, supRes] = await Promise.all([
-      api.get('categories/', { headers: { Authorization: `Bearer ${token}` }}),
-      api.get('units/', { headers: { Authorization: `Bearer ${token}` }}),
-      api.get('suppliers/', { headers: { Authorization: `Bearer ${token}` }})
+      api.get('categories/'),
+      api.get('units/'),
+      api.get('suppliers/')
     ])
-    categories.value = catRes.data
-    units.value = unitRes.data
-    suppliers.value = supRes.data
+    categories.value = catRes.data || []
+    units.value = unitRes.data || []
+    suppliers.value = supRes.data || []
+    console.log('✅ Dropdown data loaded:', {
+      categories: categories.value.length,
+      units: units.value.length,
+      suppliers: suppliers.value.length
+    })
   } catch (err) {
-    console.error('❌ Gagal ambil data dropdown:', err)
+    console.error('❌ Failed to load dropdown data:', err)
+    // Initialize with empty arrays if API fails
+    categories.value = []
+    units.value = []
+    suppliers.value = []
   }
 }
 
@@ -172,63 +181,122 @@ const formatPrice = (val) => {
 }
 
 const saveProduct = async () => {
-  const token = localStorage.getItem('token')
+  // Enhanced validation
+  const requiredFields = {
+    name: 'Product Name',
+    sku: 'SKU',
+    price: 'Selling Price',
+    cost_price: 'Cost Price'
+  }
+  
+  const missingFields = []
+  for (const [field, label] of Object.entries(requiredFields)) {
+    if (!productForm.value[field] || productForm.value[field].toString().trim() === '') {
+      missingFields.push(label)
+    }
+  }
+  
+  if (missingFields.length > 0) {
+    alert(`Please fill all required fields: ${missingFields.join(', ')}`)
+    return
+  }
 
-  // Validation
-  if (
-    !productForm.value.name ||
-    !productForm.value.sku ||
-    !productForm.value.price ||
-    !productForm.value.cost_price
-  ) {
-    alert('Please fill all required fields: Name, SKU, Cost Price, Selling Price.')
+  // Validate numeric fields
+  const priceValue = parseFloat(productForm.value.price)
+  const costValue = parseFloat(productForm.value.cost_price)
+  
+  if (isNaN(priceValue) || priceValue <= 0) {
+    alert('Please enter a valid selling price greater than 0')
+    return
+  }
+  
+  if (isNaN(costValue) || costValue <= 0) {
+    alert('Please enter a valid cost price greater than 0')
     return
   }
 
   try {
     loading.value = true
+    console.log('📦 Saving product...', editingProduct.value ? 'UPDATE' : 'CREATE')
+    
     const payload = {
-      name: productForm.value.name,
-      sku: productForm.value.sku,
-      barcode: productForm.value.barcode,
-      category: productForm.value.category,
-      variant: productForm.value.variant,
-      unit: productForm.value.unit,
-      price: parseFloat(productForm.value.price),
-      cost_price: parseFloat(productForm.value.cost_price),
-      discount: parseFloat(productForm.value.discount),
-      stock: productForm.value.stock,
-      min_stock: productForm.value.min_stock,
-      supplier: productForm.value.supplier
+      name: productForm.value.name.trim(),
+      sku: productForm.value.sku.trim(),
+      barcode: productForm.value.barcode?.trim() || '',
+      category: productForm.value.category || null,
+      variant: productForm.value.variant?.trim() || '',
+      unit: productForm.value.unit || null,
+      price: priceValue,
+      cost_price: costValue,
+      discount: parseFloat(productForm.value.discount) || 0,
+      stock: parseInt(productForm.value.stock) || 0,
+      min_stock: parseInt(productForm.value.min_stock) || 0,
+      supplier: productForm.value.supplier || null
     }
-
-    if (editingProduct.value) {
+    
+    console.log('📦 Product payload:', payload)
+    
+    let res
+    const isUpdate = editingProduct.value
+    
+    if (isUpdate) {
       // Update product
-      const res = await api.put(`products/${editingProduct.value.id}/`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      res = await api.put(`products/${editingProduct.value.id}/`, payload)
       const index = items.value.findIndex(p => p.id === editingProduct.value.id)
-      items.value[index] = { ...editingProduct.value, ...res.data }
+      if (index !== -1) {
+        items.value[index] = { ...editingProduct.value, ...res.data }
+      }
+      console.log('✅ Product updated successfully')
     } else {
       // Create product
-      const res = await api.post('products/', payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      res = await api.post('products/', payload)
       items.value.push(res.data)
+      console.log('✅ Product created successfully')
     }
 
     showModal.value = false
     editingProduct.value = null
     selectedItem.value = null
-    alert(editingProduct.value ? 'Product updated successfully' : 'Product created successfully')
-    refresh()
+    alert(`✅ Product ${isUpdate ? 'updated' : 'created'} successfully`)
+    await refresh()
   } catch (err) {
-    console.error('Error saving product:', err)
-    if (err.response && err.response.data) {
-      alert('Failed to save product:\n' + JSON.stringify(err.response.data, null, 2))
+    console.error('❌ Error saving product:', err)
+    
+    let errorMessage = 'Failed to save product.'
+    
+    if (err.response) {
+      const { status, data } = err.response
+      console.error('🚫 Server error details:', { status, data })
+      
+      if (status === 400 && data) {
+        // Handle validation errors
+        const validationErrors = []
+        for (const [field, errors] of Object.entries(data)) {
+          if (Array.isArray(errors)) {
+            validationErrors.push(`${field}: ${errors.join(', ')}`)
+          } else {
+            validationErrors.push(`${field}: ${errors}`)
+          }
+        }
+        if (validationErrors.length > 0) {
+          errorMessage = `Validation errors:\n${validationErrors.join('\n')}`
+        }
+      } else if (status === 401) {
+        errorMessage = 'Authentication failed. Please login again.'
+      } else if (status === 403) {
+        errorMessage = 'Permission denied. You do not have access to perform this action.'
+      } else if (status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
+      } else {
+        errorMessage = `Error (${status}): ${data?.detail || data?.message || 'Unknown error'}`
+      }
+    } else if (err.request) {
+      errorMessage = 'Network error. Please check your connection and try again.'
     } else {
-      alert('Failed to save product. Please check your data or connection.')
+      errorMessage = `Unexpected error: ${err.message}`
     }
+    
+    alert(errorMessage)
   } finally {
     loading.value = false
   }
@@ -259,46 +327,60 @@ const editItem = async (item) => {
 
 const deleteItem = async (item) => {
   if (!item) return
-  if (!confirm(`Ita-boot iha serteza hakarak atu hamoos? ${item.name}?`)) return
+  if (!confirm(`Are you sure you want to delete "${item.name}"?`)) return
 
-  const token = localStorage.getItem('token')
   try {
-    await api.delete(`products/${item.id}/`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    alert('✅ Produtu halakon ho susesu.')
-    refresh()
+    console.log('🗑️ Deleting product:', item.id, item.name)
+    await api.delete(`products/${item.id}/`)
+    console.log('✅ Product deleted successfully')
+    alert('✅ Product deleted successfully.')
+    await refresh()
     selectedItem.value = null
   } catch (err) {
-    console.error('❌ Falha halakon produtu:', err)
-    alert('Akontese erru bainhira halakon produtu.')
+    console.error('❌ Failed to delete product:', err)
+    let errorMessage = 'Failed to delete product.'
+    
+    if (err.response?.status === 400) {
+      errorMessage = 'Cannot delete product. It may be referenced by other records.'
+    } else if (err.response?.status === 404) {
+      errorMessage = 'Product not found. It may have been already deleted.'
+    } else if (err.response?.status >= 500) {
+      errorMessage = 'Server error. Please try again later.'
+    }
+    
+    alert(errorMessage)
   }
 }
 
 const loadProducts = async () => {
-  const token = localStorage.getItem('token')
-  const response = await api.get('products/', {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-
-  items.value = response.data.map(p => ({
-    id: p.id,
-    name: p.name,
-    sku: p.sku,
-    barcode: p.barcode,
-    category: p.category,
-    variant: p.variant,
-    unit: p.unit,
-    price: parseFloat(p.price),
-    cost_price: parseFloat(p.cost_price),
-    discount: parseFloat(p.discount),
-    stock: p.stock,
-    min_stock: p.min_stock,
-    supplier: p.supplier,
-    satuan: p.unit_name,
-    kategori: p.category_name,
-    supplier_name: p.supplier_name
-  }))
+  try {
+    console.log('🔄 Loading products...')
+    const response = await api.get('products/')
+    
+    items.value = response.data.map(p => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      barcode: p.barcode,
+      category: p.category,
+      variant: p.variant,
+      unit: p.unit,
+      price: parseFloat(p.price) || 0,
+      cost_price: parseFloat(p.cost_price) || 0,
+      discount: parseFloat(p.discount) || 0,
+      stock: parseInt(p.stock) || 0,
+      min_stock: parseInt(p.min_stock) || 0,
+      supplier: p.supplier,
+      satuan: p.unit_name,
+      kategori: p.category_name,
+      supplier_name: p.supplier_name
+    }))
+    
+    console.log(`✅ Loaded ${items.value.length} products`)
+  } catch (err) {
+    console.error('❌ Failed to load products:', err)
+    throw err
+  }
 }
 
 const refresh = async () => {

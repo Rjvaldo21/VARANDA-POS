@@ -64,19 +64,29 @@ const deleteSupplier = async (supplier = null) => {
     alert('⚠️ Please select a supplier first')
     return
   }
-  if (!confirm(`Delete supplier: ${target.name}?`)) return
+  if (!confirm(`Are you sure you want to delete "${target.name}"?`)) return
 
   try {
-    const token = localStorage.getItem('token')
-    await api.delete(`suppliers/${target.id}/`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    console.log('🗑️ Deleting supplier:', target.id, target.name)
+    await api.delete(`suppliers/${target.id}/`)
+    console.log('✅ Supplier deleted successfully')
     selectedSupplier.value = null
     await refresh()
     alert('✅ Supplier deleted successfully')
   } catch (err) {
     console.error('❌ Failed to delete supplier:', err)
-    alert('Error occurred while deleting supplier')
+    
+    let errorMessage = 'Failed to delete supplier.'
+    
+    if (err.response?.status === 400) {
+      errorMessage = 'Cannot delete supplier. It may be referenced by existing products.'
+    } else if (err.response?.status === 404) {
+      errorMessage = 'Supplier not found. It may have been already deleted.'
+    } else if (err.response?.status >= 500) {
+      errorMessage = 'Server error. Please try again later.'
+    }
+    
+    alert(errorMessage)
   }
 }
 
@@ -90,38 +100,88 @@ const filteredSuppliers = computed(() => {
 })
 
 const saveSupplier = async () => {
-  // Validation
-  if (!supplierForm.value.name) {
+  // Enhanced validation
+  if (!supplierForm.value.name || supplierForm.value.name.trim() === '') {
     alert('Please fill supplier name.')
     return
+  }
+  
+  // Validate email format if provided
+  if (supplierForm.value.email && supplierForm.value.email.trim()) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(supplierForm.value.email.trim())) {
+      alert('Please enter a valid email address.')
+      return
+    }
   }
 
   try {
     loading.value = true
-    const token = localStorage.getItem('token')
+    console.log('📦 Saving supplier...', selectedSupplier.value ? 'UPDATE' : 'CREATE')
     
-    if (selectedSupplier.value) {
+    const payload = {
+      name: supplierForm.value.name.trim(),
+      phone: supplierForm.value.phone?.trim() || '',
+      email: supplierForm.value.email?.trim() || '',
+      address: supplierForm.value.address?.trim() || ''
+    }
+    
+    console.log('📦 Supplier payload:', payload)
+    
+    const isUpdate = selectedSupplier.value
+    
+    if (isUpdate) {
       // Edit existing supplier
-      await api.put(`suppliers/${selectedSupplier.value.id}/`, supplierForm.value, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await api.put(`suppliers/${selectedSupplier.value.id}/`, payload)
+      console.log('✅ Supplier updated successfully')
       alert('✅ Supplier updated successfully')
     } else {
       // Add new supplier
-      await api.post('suppliers/', supplierForm.value, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await api.post('suppliers/', payload)
+      console.log('✅ Supplier created successfully')
       alert('✅ Supplier added successfully')
     }
+    
     showModal.value = false
     await refresh()
   } catch (err) {
     console.error('❌ Failed to save supplier:', err)
-    if (err.response && err.response.data) {
-      alert('Failed to save supplier:\n' + JSON.stringify(err.response.data, null, 2))
+    
+    let errorMessage = 'Failed to save supplier.'
+    
+    if (err.response) {
+      const { status, data } = err.response
+      console.error('🚫 Server error details:', { status, data })
+      
+      if (status === 400 && data) {
+        // Handle validation errors
+        const validationErrors = []
+        for (const [field, errors] of Object.entries(data)) {
+          if (Array.isArray(errors)) {
+            validationErrors.push(`${field}: ${errors.join(', ')}`)
+          } else {
+            validationErrors.push(`${field}: ${errors}`)
+          }
+        }
+        if (validationErrors.length > 0) {
+          errorMessage = `Validation errors:\n${validationErrors.join('\n')}`
+        }
+      } else if (status === 401) {
+        errorMessage = 'Authentication failed. Please login again.'
+      } else if (status === 403) {
+        errorMessage = 'Permission denied. You do not have access to perform this action.'
+      } else if (status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
+      } else {
+        errorMessage = `Error (${status}): ${data?.detail || data?.message || 'Unknown error'}`
+      }
+    } else if (err.request) {
+      errorMessage = 'Network error. Please check your connection and try again.'
     } else {
-      alert('Failed to save supplier. Please check your data or connection.')
+      errorMessage = `Unexpected error: ${err.message}`
     }
+    
+    alert(errorMessage)
   } finally {
     loading.value = false
   }
@@ -134,17 +194,17 @@ const getLogoUrl = (path) => {
 
 const refresh = async () => {
   try {
-    const token = localStorage.getItem('token')
-    const response = await api.get('suppliers/', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    suppliers.value = response.data.map((s, index) => ({
+    console.log('🔄 Loading suppliers...')
+    const response = await api.get('suppliers/')
+    suppliers.value = (response.data || []).map((s, index) => ({
       ...s,
-      kode: s.kode || `SUP-${index + 1}`
+      kode: s.kode || `SUP-${(index + 1).toString().padStart(3, '0')}`
     }))
     selectedSupplier.value = null
+    console.log(`✅ Loaded ${suppliers.value.length} suppliers`)
   } catch (error) {
-    console.error('Gagal refresh suppliers:', error)
+    console.error('❌ Failed to refresh suppliers:', error)
+    suppliers.value = []
   }
 }
 

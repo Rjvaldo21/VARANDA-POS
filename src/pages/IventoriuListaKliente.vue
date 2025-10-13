@@ -101,48 +101,76 @@ const editItem = (customer) => {
 const fetchCustomers = async () => {
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
-    const response = await api.get('customers/', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    console.log('🔄 Loading customers...')
+    const response = await api.get('customers/')
 
-    customers.value = response.data.map((item, index) => ({
+    customers.value = (response.data || []).map((item, index) => ({
       id: item.id,
       nomor: item.id.toString().padStart(3, '0'),
-      nama: item.name,
+      nama: item.name || '',
       telepon: item.phone || '',
       email: item.email || '',
       alamat: item.address || '',
-      poin: item.points || 0,
+      poin: parseInt(item.points) || 0,
       piutang: 0 
     }))
     selectedCustomer.value = null
+    console.log(`✅ Loaded ${customers.value.length} customers`)
   } catch (error) {
-    console.error('Failed to fetch customers:', error)
+    console.error('❌ Failed to fetch customers:', error)
+    customers.value = []
   } finally {
     loading.value = false
   }
 }
 
 const saveCustomer = async () => {
-  // Validation
-  if (!customerForm.value.name) {
+  // Enhanced validation
+  if (!customerForm.value.name || customerForm.value.name.trim() === '') {
     alert('Please fill customer name.')
+    return
+  }
+  
+  // Validate email format if provided
+  if (customerForm.value.email && customerForm.value.email.trim()) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(customerForm.value.email.trim())) {
+      alert('Please enter a valid email address.')
+      return
+    }
+  }
+  
+  // Validate points if provided
+  if (customerForm.value.points && isNaN(parseInt(customerForm.value.points))) {
+    alert('Please enter a valid number for points.')
     return
   }
 
   saving.value = true
   try {
-    const token = localStorage.getItem('token')
-    const headers = { Authorization: `Bearer ${token}` }
-
-    if (isEditing.value) {
+    console.log('📦 Saving customer...', isEditing.value ? 'UPDATE' : 'CREATE')
+    
+    const payload = {
+      name: customerForm.value.name.trim(),
+      phone: customerForm.value.phone?.trim() || '',
+      email: customerForm.value.email?.trim() || '',
+      address: customerForm.value.address?.trim() || '',
+      points: parseInt(customerForm.value.points) || 0
+    }
+    
+    console.log('📦 Customer payload:', payload)
+    
+    const isUpdate = isEditing.value
+    
+    if (isUpdate) {
       // Update existing customer
-      await api.put(`customers/${selectedCustomer.value.id}/`, customerForm.value, { headers })
+      await api.put(`customers/${selectedCustomer.value.id}/`, payload)
+      console.log('✅ Customer updated successfully')
       alert('✅ Customer updated successfully')
     } else {
       // Create new customer
-      await api.post('customers/', customerForm.value, { headers })
+      await api.post('customers/', payload)
+      console.log('✅ Customer created successfully')
       alert('✅ Customer created successfully')
     }
     
@@ -150,11 +178,42 @@ const saveCustomer = async () => {
     await refresh()
   } catch (err) {
     console.error('❌ Failed to save customer:', err)
-    if (err.response && err.response.data) {
-      alert('Failed to save customer:\n' + JSON.stringify(err.response.data, null, 2))
+    
+    let errorMessage = 'Failed to save customer.'
+    
+    if (err.response) {
+      const { status, data } = err.response
+      console.error('🚫 Server error details:', { status, data })
+      
+      if (status === 400 && data) {
+        // Handle validation errors
+        const validationErrors = []
+        for (const [field, errors] of Object.entries(data)) {
+          if (Array.isArray(errors)) {
+            validationErrors.push(`${field}: ${errors.join(', ')}`)
+          } else {
+            validationErrors.push(`${field}: ${errors}`)
+          }
+        }
+        if (validationErrors.length > 0) {
+          errorMessage = `Validation errors:\n${validationErrors.join('\n')}`
+        }
+      } else if (status === 401) {
+        errorMessage = 'Authentication failed. Please login again.'
+      } else if (status === 403) {
+        errorMessage = 'Permission denied. You do not have access to perform this action.'
+      } else if (status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
+      } else {
+        errorMessage = `Error (${status}): ${data?.detail || data?.message || 'Unknown error'}`
+      }
+    } else if (err.request) {
+      errorMessage = 'Network error. Please check your connection and try again.'
     } else {
-      alert('Failed to save customer. Please check your data.')
+      errorMessage = `Unexpected error: ${err.message}`
     }
+    
+    alert(errorMessage)
   } finally {
     saving.value = false
   }
@@ -165,19 +224,29 @@ const deleteItem = async (customer) => {
     alert('⚠️ Please select a customer first')
     return
   }
-  if (!confirm(`Delete customer "${customer.nama}"?`)) return
+  if (!confirm(`Are you sure you want to delete "${customer.nama}"?`)) return
   
   try {
-    const token = localStorage.getItem('token')
-    await api.delete(`customers/${customer.id}/`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    console.log('🗑️ Deleting customer:', customer.id, customer.nama)
+    await api.delete(`customers/${customer.id}/`)
+    console.log('✅ Customer deleted successfully')
     alert('✅ Customer deleted successfully')
     selectedCustomer.value = null
     await refresh()
   } catch (err) {
     console.error('❌ Failed to delete customer:', err)
-    alert('Failed to delete customer')
+    
+    let errorMessage = 'Failed to delete customer.'
+    
+    if (err.response?.status === 400) {
+      errorMessage = 'Cannot delete customer. They may have transaction history.'
+    } else if (err.response?.status === 404) {
+      errorMessage = 'Customer not found. They may have been already deleted.'
+    } else if (err.response?.status >= 500) {
+      errorMessage = 'Server error. Please try again later.'
+    }
+    
+    alert(errorMessage)
   }
 }
 

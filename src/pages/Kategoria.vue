@@ -83,24 +83,46 @@ const editKategori = (category) => {
 }
 
 const saveCategory = async () => {
-  // Validation
-  if (!categoryForm.value.name || !categoryForm.value.code) {
-    alert('Please fill all required fields.')
+  // Enhanced validation
+  const requiredFields = {
+    name: 'Category Name',
+    code: 'Category Code'
+  }
+  
+  const missingFields = []
+  for (const [field, label] of Object.entries(requiredFields)) {
+    if (!categoryForm.value[field] || categoryForm.value[field].toString().trim() === '') {
+      missingFields.push(label)
+    }
+  }
+  
+  if (missingFields.length > 0) {
+    alert(`Please fill all required fields: ${missingFields.join(', ')}`)
     return
   }
 
   saving.value = true
   try {
-    const token = localStorage.getItem('token')
-    const headers = { Authorization: `Bearer ${token}` }
-
-    if (isEditing.value) {
+    console.log('📦 Saving category...', isEditing.value ? 'UPDATE' : 'CREATE')
+    
+    const payload = {
+      name: categoryForm.value.name.trim(),
+      code: categoryForm.value.code.trim().toUpperCase()
+    }
+    
+    console.log('📦 Category payload:', payload)
+    
+    const isUpdate = isEditing.value
+    
+    if (isUpdate) {
       // Update existing category
-      await api.put(`categories/${selectedKategori.value.id}/`, categoryForm.value, { headers })
+      await api.put(`categories/${selectedKategori.value.id}/`, payload)
+      console.log('✅ Category updated successfully')
       alert('✅ Category updated successfully')
     } else {
       // Create new category
-      await api.post('categories/', categoryForm.value, { headers })
+      await api.post('categories/', payload)
+      console.log('✅ Category created successfully')
       alert('✅ Category created successfully')
     }
     
@@ -108,44 +130,85 @@ const saveCategory = async () => {
     await refresh()
   } catch (err) {
     console.error('❌ Failed to save category:', err)
-    if (err.response && err.response.data) {
-      alert('Failed to save category:\n' + JSON.stringify(err.response.data, null, 2))
+    
+    let errorMessage = 'Failed to save category.'
+    
+    if (err.response) {
+      const { status, data } = err.response
+      console.error('🚫 Server error details:', { status, data })
+      
+      if (status === 400 && data) {
+        // Handle validation errors
+        const validationErrors = []
+        for (const [field, errors] of Object.entries(data)) {
+          if (Array.isArray(errors)) {
+            validationErrors.push(`${field}: ${errors.join(', ')}`)
+          } else {
+            validationErrors.push(`${field}: ${errors}`)
+          }
+        }
+        if (validationErrors.length > 0) {
+          errorMessage = `Validation errors:\n${validationErrors.join('\n')}`
+        }
+      } else if (status === 401) {
+        errorMessage = 'Authentication failed. Please login again.'
+      } else if (status === 403) {
+        errorMessage = 'Permission denied. You do not have access to perform this action.'
+      } else if (status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
+      } else {
+        errorMessage = `Error (${status}): ${data?.detail || data?.message || 'Unknown error'}`
+      }
+    } else if (err.request) {
+      errorMessage = 'Network error. Please check your connection and try again.'
     } else {
-      alert('Failed to save category. Please check your data.')
+      errorMessage = `Unexpected error: ${err.message}`
     }
+    
+    alert(errorMessage)
   } finally {
     saving.value = false
   }
 }
 
 const deleteKategori = async (category) => {
-  if (!confirm(`Delete category "${category.name}"?`)) return
+  if (!confirm(`Are you sure you want to delete "${category.name}"?`)) return
   
   try {
-    const token = localStorage.getItem('token')
-    await api.delete(`categories/${category.id}/`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    console.log('🗑️ Deleting category:', category.id, category.name)
+    await api.delete(`categories/${category.id}/`)
+    console.log('✅ Category deleted successfully')
     alert('✅ Category deleted successfully')
     selectedKategori.value = null
     await refresh()
   } catch (err) {
     console.error('❌ Failed to delete category:', err)
-    alert('Failed to delete category')
+    
+    let errorMessage = 'Failed to delete category.'
+    
+    if (err.response?.status === 400) {
+      errorMessage = 'Cannot delete category. It may be used by existing products.'
+    } else if (err.response?.status === 404) {
+      errorMessage = 'Category not found. It may have been already deleted.'
+    } else if (err.response?.status >= 500) {
+      errorMessage = 'Server error. Please try again later.'
+    }
+    
+    alert(errorMessage)
   }
 }
 
 const refresh = async () => {
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
-    const response = await api.get('categories/', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    categories.value = response.data
+    console.log('🔄 Loading categories...')
+    const response = await api.get('categories/')
+    categories.value = response.data || []
     selectedKategori.value = null
+    console.log(`✅ Loaded ${categories.value.length} categories`)
   } catch (err) {
     console.error('❌ Failed to refresh categories:', err)
+    categories.value = []
   } finally {
     loading.value = false
   }

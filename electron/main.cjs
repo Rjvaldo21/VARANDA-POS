@@ -38,9 +38,14 @@ function startDjangoServer() {
     ? path.join(process.resourcesPath, 'backend')
     : path.join(__dirname, '../backend')
 
+  // Fix Python path for different platforms
   const pythonPath = isProd
-  ? path.join(process.resourcesPath, 'backend', 'python', 'python.exe')
-  : path.join(basePath, 'python', 'python.exe')
+    ? (process.platform === 'win32' 
+       ? path.join(process.resourcesPath, 'backend', 'python', 'python.exe')
+       : path.join(process.resourcesPath, 'backend', 'python', 'python3'))
+    : (process.platform === 'win32'
+       ? path.join(basePath, 'venv', 'Scripts', 'python.exe')
+       : path.join(basePath, 'venv_mac', 'bin', 'python')) // Use venv Python for development
   const managePyPath = path.join(basePath, 'manage.py')
   const userDbPath = prepareDatabase()  
 
@@ -118,7 +123,24 @@ function createWindow() {
   if (app.isPackaged) {
     win.loadFile(path.join(__dirname, '../dist/index.html'))
   } else {
-    win.loadURL('http://localhost:5173')
+    // Try different ports that Vite might use
+    const tryLoadURL = async (ports) => {
+      for (const port of ports) {
+        try {
+          const url = `http://localhost:${port}`
+          console.log(`🔗 Trying to load: ${url}`)
+          await win.loadURL(url)
+          console.log(`✅ Successfully loaded: ${url}`)
+          return
+        } catch (error) {
+          console.log(`❌ Failed to load port ${port}, trying next...`)
+        }
+      }
+      console.error('❌ Could not connect to Vite dev server on any port')
+    }
+    
+    // Try common Vite ports
+    tryLoadURL([5173, 5174, 5175, 3000])
   }
 }
 

@@ -11,6 +11,7 @@ from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.parsers import JSONParser
+from rest_framework import parsers
 from rest_framework_simplejwt.authentication import JWTAuthentication # type: ignore
 from rest_framework.response import Response
 from rest_framework.decorators import action, api_view, permission_classes
@@ -321,6 +322,7 @@ class ProductReturnViewSet(viewsets.ModelViewSet):
 class StoreProfileViewSet(viewsets.ModelViewSet):
     queryset = StoreProfile.objects.all()
     serializer_class = StoreProfileSerializer
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
     def list(self, request, *args, **kwargs):
         try:

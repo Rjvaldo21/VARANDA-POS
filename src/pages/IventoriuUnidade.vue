@@ -88,57 +88,76 @@ const deleteItem = async (unit) => {
     alert('⚠️ Please select a unit first')
     return
   }
-  if (!confirm(`Delete unit "${unit.name}"?`)) return
+  if (!confirm(`Are you sure you want to delete "${unit.name}"?`)) return
   
   try {
-    const token = localStorage.getItem('token')
-    await api.delete(`units/${unit.id}/`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    console.log('🗑️ Deleting unit:', unit.id, unit.name)
+    await api.delete(`units/${unit.id}/`)
+    console.log('✅ Unit deleted successfully')
     alert('✅ Unit deleted successfully')
     selectedUnit.value = null
     await refresh()
   } catch (err) {
     console.error('❌ Failed to delete unit:', err)
-    alert('Failed to delete unit')
+    
+    let errorMessage = 'Failed to delete unit.'
+    
+    if (err.response?.status === 400) {
+      errorMessage = 'Cannot delete unit. It may be used by existing products.'
+    } else if (err.response?.status === 404) {
+      errorMessage = 'Unit not found. It may have been already deleted.'
+    } else if (err.response?.status >= 500) {
+      errorMessage = 'Server error. Please try again later.'
+    }
+    
+    alert(errorMessage)
   }
 }
 
 const fetchUnits = async () => {
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
-    const res = await api.get('units/', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    units.value = res.data
+    console.log('🔄 Loading units...')
+    const res = await api.get('units/')
+    units.value = res.data || []
     selectedUnit.value = null
+    console.log(`✅ Loaded ${units.value.length} units`)
   } catch (error) {
-    console.error('Failed to fetch units:', error)
+    console.error('❌ Failed to fetch units:', error)
+    units.value = []
   } finally {
     loading.value = false
   }
 }
 
 const saveUnit = async () => {
-  // Validation
-  if (!unitForm.value.name) {
+  // Enhanced validation
+  if (!unitForm.value.name || unitForm.value.name.trim() === '') {
     alert('Please fill unit name.')
     return
   }
 
   saving.value = true
   try {
-    const token = localStorage.getItem('token')
-    const headers = { Authorization: `Bearer ${token}` }
-
-    if (isEditing.value) {
+    console.log('📦 Saving unit...', isEditing.value ? 'UPDATE' : 'CREATE')
+    
+    const payload = {
+      name: unitForm.value.name.trim()
+    }
+    
+    console.log('📦 Unit payload:', payload)
+    
+    const isUpdate = isEditing.value
+    
+    if (isUpdate) {
       // Update existing unit
-      await api.put(`units/${selectedUnit.value.id}/`, unitForm.value, { headers })
+      await api.put(`units/${selectedUnit.value.id}/`, payload)
+      console.log('✅ Unit updated successfully')
       alert('✅ Unit updated successfully')
     } else {
       // Create new unit
-      await api.post('units/', unitForm.value, { headers })
+      await api.post('units/', payload)
+      console.log('✅ Unit created successfully')
       alert('✅ Unit created successfully')
     }
     
@@ -146,11 +165,42 @@ const saveUnit = async () => {
     await refresh()
   } catch (err) {
     console.error('❌ Failed to save unit:', err)
-    if (err.response && err.response.data) {
-      alert('Failed to save unit:\n' + JSON.stringify(err.response.data, null, 2))
+    
+    let errorMessage = 'Failed to save unit.'
+    
+    if (err.response) {
+      const { status, data } = err.response
+      console.error('🚫 Server error details:', { status, data })
+      
+      if (status === 400 && data) {
+        // Handle validation errors
+        const validationErrors = []
+        for (const [field, errors] of Object.entries(data)) {
+          if (Array.isArray(errors)) {
+            validationErrors.push(`${field}: ${errors.join(', ')}`)
+          } else {
+            validationErrors.push(`${field}: ${errors}`)
+          }
+        }
+        if (validationErrors.length > 0) {
+          errorMessage = `Validation errors:\n${validationErrors.join('\n')}`
+        }
+      } else if (status === 401) {
+        errorMessage = 'Authentication failed. Please login again.'
+      } else if (status === 403) {
+        errorMessage = 'Permission denied. You do not have access to perform this action.'
+      } else if (status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
+      } else {
+        errorMessage = `Error (${status}): ${data?.detail || data?.message || 'Unknown error'}`
+      }
+    } else if (err.request) {
+      errorMessage = 'Network error. Please check your connection and try again.'
     } else {
-      alert('Failed to save unit. Please check your data.')
+      errorMessage = `Unexpected error: ${err.message}`
     }
+    
+    alert(errorMessage)
   } finally {
     saving.value = false
   }
