@@ -172,25 +172,53 @@ function createWindow() {
   win.webContents.on('dom-ready', () => {
     console.log('🎯 DOM ready - enabling input focus')
     win.webContents.executeJavaScript(`
-      // Force enable all inputs on Windows
-      document.addEventListener('DOMContentLoaded', function() {
+      // Function to force enable all inputs
+      function enableAllInputs() {
         const inputs = document.querySelectorAll('input, textarea, select');
         inputs.forEach(input => {
           input.removeAttribute('disabled');
           input.style.pointerEvents = 'auto';
           input.style.userSelect = 'text';
+          input.style.webkitUserSelect = 'text';
+          input.tabIndex = 0;
         });
+        console.log('🔓 Enabled', inputs.length, 'inputs');
+      }
+      
+      // Initial enable
+      document.addEventListener('DOMContentLoaded', enableAllInputs);
+      
+      // Re-enable after dynamic content changes (like after logo save)
+      const observer = new MutationObserver((mutations) => {
+        let hasNewInputs = false;
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList') {
+            mutation.addedNodes.forEach((node) => {
+              if (node.nodeType === 1) { // Element node
+                if (node.matches && (node.matches('input, textarea, select') || 
+                    node.querySelector && node.querySelector('input, textarea, select'))) {
+                  hasNewInputs = true;
+                }
+              }
+            });
+          }
+        });
+        if (hasNewInputs) {
+          setTimeout(enableAllInputs, 100);
+        }
       });
       
-      // Ensure inputs work after page loads
+      // Start observing
       setTimeout(() => {
-        const inputs = document.querySelectorAll('input, textarea, select');
-        inputs.forEach(input => {
-          input.removeAttribute('disabled');
-          input.style.pointerEvents = 'auto';
-          input.style.userSelect = 'text';
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true
         });
-      }, 1000);
+        enableAllInputs(); // Enable immediately
+      }, 500);
+      
+      // Periodic re-enable as fallback
+      setInterval(enableAllInputs, 3000);
     `)
   })
 

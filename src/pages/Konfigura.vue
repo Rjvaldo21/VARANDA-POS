@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n' 
 import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
@@ -198,6 +198,19 @@ const saveProfile = async () => {
     
     // Refresh profile data
     await fetchStoreProfile()
+
+    // Re-enable all inputs after DOM update (Windows Electron fix)
+    await nextTick()
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('input, textarea, select')
+      inputs.forEach(input => {
+        input.removeAttribute('disabled')
+        input.style.pointerEvents = 'auto'
+        input.style.userSelect = 'text'
+        input.tabIndex = 0
+      })
+      console.log('🔓 Re-enabled inputs after logo save')
+    }, 100)
 
     alert('✅ Store profile saved successfully!')
     
