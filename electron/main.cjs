@@ -149,20 +149,50 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     backgroundColor: '#ffffff',
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#ffffff',
-      symbolColor: '#000000',
-      height: 30
-    },
+    show: false,
     webPreferences: {
+      nodeIntegration: false,
       contextIsolation: true,
+      enableRemoteModule: false,
+      webSecurity: true,
       preload: path.join(__dirname, 'preload.js')
     }
   })
 
   win.removeMenu()
   win.setMenuBarVisibility(false)
+
+  // Show window only after content is loaded to prevent input focus issues
+  win.once('ready-to-show', () => {
+    win.show()
+    win.focus()
+  })
+
+  // Add event listeners for Windows-specific input issues
+  win.webContents.on('dom-ready', () => {
+    console.log('🎯 DOM ready - enabling input focus')
+    win.webContents.executeJavaScript(`
+      // Force enable all inputs on Windows
+      document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+          input.removeAttribute('disabled');
+          input.style.pointerEvents = 'auto';
+          input.style.userSelect = 'text';
+        });
+      });
+      
+      // Ensure inputs work after page loads
+      setTimeout(() => {
+        const inputs = document.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+          input.removeAttribute('disabled');
+          input.style.pointerEvents = 'auto';
+          input.style.userSelect = 'text';
+        });
+      }, 1000);
+    `)
+  })
 
   if (app.isPackaged) {
     win.loadFile(path.join(__dirname, '../dist/index.html'))
