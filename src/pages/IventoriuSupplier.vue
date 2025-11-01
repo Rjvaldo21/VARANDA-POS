@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
 import api, { baseURL } from '@/axios'
 import { useI18n } from 'vue-i18n'
+import { reloadAfterSave } from '@/utils/windowsElectronFix.js'
 
 const { t } = useI18n()
 
@@ -144,6 +145,9 @@ const saveSupplier = async () => {
     
     showModal.value = false
     await refresh()
+    
+    // Windows Electron fix: Reload page after save
+    reloadAfterSave()
   } catch (err) {
     console.error('❌ Failed to save supplier:', err)
     
