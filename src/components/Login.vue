@@ -16,51 +16,25 @@ const emit = defineEmits(['login-success'])
 
 const login = async () => {
   try {
-    // Use AuthManager for Windows Electron input preservation
-    const isWindowsElectron = window.electronAPI && navigator.platform.includes('Win')
-    
-    if (isWindowsElectron && window.authManager) {
-      // Use enhanced auth manager
-      const result = await window.authManager.login({
-        username: username.value,
-        password: password.value
-      })
-      
-      if (result.success) {
-        emit('login-success')
-        router.push('/pos')
-      } else {
-        error.value = result.error || t('auth.loginFailed')
-      }
-    } else {
-      // Standard login for other platforms
-      const res = await api.post('/token/', {
-        username: username.value,
-        password: password.value
-      })
+    const res = await api.post('/token/', {
+      username: username.value,
+      password: password.value
+    })
 
-      const token = res.data.access
-      const refresh = res.data.refresh
-      const decoded = jwtDecode(token)
+    const token = res.data.access
+    const refresh = res.data.refresh
+    const decoded = jwtDecode(token)
 
-      localStorage.setItem('token', token)
-      localStorage.setItem('refresh_token', refresh)
-      localStorage.setItem('username', decoded.username)
-      localStorage.setItem('role', decoded.role)
+    localStorage.setItem('token', token)
+    localStorage.setItem('refresh_token', refresh)
+    localStorage.setItem('username', decoded.username)
+    localStorage.setItem('role', decoded.role)
 
-      emit('login-success')
-      router.push('/pos')
-    }
+    emit('login-success')
+    router.push('/pos')
   } catch (err) {
     error.value = t('auth.loginFailed')
     console.error(err)
-    
-    // Ensure inputs remain enabled on error
-    if (window.electronAPI && navigator.platform.includes('Win')) {
-      setTimeout(() => {
-        window.authManager?.enableAllInputs('login-error')
-      }, 100)
-    }
   }
 }
 

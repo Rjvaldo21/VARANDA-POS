@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import authManager from '@/utils/authManager.js'
 import POS from '../pages/POS.vue'
 import Konfigura from '@/pages/Konfigura.vue'
 import CustomerScreen from '../pages/CustomerScreen.vue'
@@ -78,69 +77,15 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  // Use enhanced AuthManager for input-safe navigation
-  const isWindowsElectron = window.electronAPI && navigator.platform.includes('Win')
-  
-  if (isWindowsElectron) {
-    // Use AuthManager's enhanced route guard
-    authManager.beforeRouteEnter(to, from, next)
-  } else {
-    // Standard auth check for non-Windows platforms
-    const token = localStorage.getItem('token')
-    
-    if (to.path === '/login' && token) {
-      next('/pos')
-    }
-    else if (to.path !== '/login' && !token) {
-      next('/login')
-    }
-    else {
-      next()
-    }
+  const token = localStorage.getItem('token')
+  if (to.path === '/login' && token) {
+    next('/pos')
   }
-})
-
-// Windows Electron Fix: Re-enable inputs after route navigation
-router.afterEach((to, from) => {
-  const isWindowsElectron = window.electronAPI && navigator.platform.includes('Win')
-  
-  if (isWindowsElectron) {
-    // Multiple timing strategies to ensure inputs are enabled
-    setTimeout(() => {
-      const inputs = document.querySelectorAll('input, textarea, select, button')
-      inputs.forEach(input => {
-        if (!input.hasAttribute('data-keep-disabled')) {
-          input.removeAttribute('disabled')
-          input.style.pointerEvents = 'auto'
-          input.style.userSelect = 'text'
-          input.style.webkitUserSelect = 'text'
-          input.tabIndex = input.tabIndex || 0
-          
-          if (input.type === 'button' || input.type === 'submit') {
-            input.style.cursor = 'pointer'
-          }
-        }
-      })
-      console.log('🔓 Router afterEach: Re-enabled inputs after navigation', {
-        from: from.path,
-        to: to.path,
-        inputCount: inputs.length
-      })
-    }, 100)
-    
-    // Additional fallback timing
-    setTimeout(() => {
-      const inputs = document.querySelectorAll('input:disabled, textarea:disabled, select:disabled')
-      if (inputs.length > 0) {
-        inputs.forEach(input => {
-          if (!input.hasAttribute('data-keep-disabled')) {
-            input.removeAttribute('disabled')
-            input.style.pointerEvents = 'auto'
-          }
-        })
-        console.log('🔓 Router afterEach: Fallback re-enabled', inputs.length, 'disabled inputs')
-      }
-    }, 300)
+  else if (to.path !== '/login' && !token) {
+    next('/login')
+  }
+  else {
+    next()
   }
 })
 

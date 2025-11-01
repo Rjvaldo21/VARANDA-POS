@@ -168,59 +168,48 @@ function createWindow() {
     win.focus()
   })
 
-  // Add event listeners for Windows-specific input issues
-  win.webContents.on('dom-ready', () => {
-    console.log('🎯 DOM ready - enabling input focus')
-    win.webContents.executeJavaScript(`
-      // Function to force enable all inputs
-      function enableAllInputs() {
-        const inputs = document.querySelectorAll('input, textarea, select');
-        inputs.forEach(input => {
-          input.removeAttribute('disabled');
-          input.style.pointerEvents = 'auto';
-          input.style.userSelect = 'text';
-          input.style.webkitUserSelect = 'text';
-          input.tabIndex = 0;
-        });
-        console.log('🔓 Enabled', inputs.length, 'inputs');
-      }
+  // Windows Electron Input Fix - SIMPLE VERSION
+  if (process.platform === 'win32') {
+    win.webContents.on('dom-ready', () => {
+      console.log('🎯 Windows Electron: Initializing input fix')
       
-      // Initial enable
-      document.addEventListener('DOMContentLoaded', enableAllInputs);
-      
-      // Re-enable after dynamic content changes (like after logo save)
-      const observer = new MutationObserver((mutations) => {
-        let hasNewInputs = false;
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList') {
-            mutation.addedNodes.forEach((node) => {
-              if (node.nodeType === 1) { // Element node
-                if (node.matches && (node.matches('input, textarea, select') || 
-                    node.querySelector && node.querySelector('input, textarea, select'))) {
-                  hasNewInputs = true;
-                }
-              }
-            });
-          }
-        });
-        if (hasNewInputs) {
-          setTimeout(enableAllInputs, 100);
+      win.webContents.executeJavaScript(`
+        // Simple input enabler function
+        function forceEnableInputs() {
+          const inputs = document.querySelectorAll('input, textarea, select, button');
+          inputs.forEach(input => {
+            input.disabled = false;
+            input.readOnly = false;
+            input.style.pointerEvents = 'auto';
+            input.style.userSelect = 'text';
+            input.style.webkitUserSelect = 'text';
+            input.style.cursor = '';
+            if (input.tabIndex < 0) input.tabIndex = 0;
+          });
+          console.log('🔓 Fixed', inputs.length, 'inputs');
         }
-      });
-      
-      // Start observing
-      setTimeout(() => {
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true
-        });
-        enableAllInputs(); // Enable immediately
-      }, 500);
-      
-      // Periodic re-enable as fallback
-      setInterval(enableAllInputs, 3000);
-    `)
-  })
+        
+        // Run immediately
+        forceEnableInputs();
+        
+        // Run after page loads
+        document.addEventListener('DOMContentLoaded', forceEnableInputs);
+        
+        // Run periodically (every 2 seconds)
+        setInterval(forceEnableInputs, 2000);
+        
+        // Run after any click (catches form submissions, saves, etc)
+        document.addEventListener('click', () => {
+          setTimeout(forceEnableInputs, 100);
+        }, true);
+        
+        // Run after any input change
+        document.addEventListener('input', () => {
+          setTimeout(forceEnableInputs, 50);
+        }, true);
+      `)
+    })
+  }
 
   if (app.isPackaged) {
     win.loadFile(path.join(__dirname, '../dist/index.html'))
