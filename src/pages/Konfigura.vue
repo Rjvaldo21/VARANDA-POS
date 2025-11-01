@@ -44,6 +44,10 @@ const logoSrc = computed(() => {
 const resetLogo = () => {
   logoUrl.value = ''
   selectedLogoFile.value = null
+  // Reset file input
+  if (logoInput.value) {
+    logoInput.value.value = ''
+  }
 }
 
 const onLogoSelected = (event) => {
@@ -193,8 +197,11 @@ const saveProfile = async () => {
 
     console.log('✅ Store profile saved successfully')
     
-    // Reset selected file after successful save
+    // Reset file input and selected file after successful save
     selectedLogoFile.value = null
+    if (logoInput.value) {
+      logoInput.value.value = '' // Reset file input
+    }
     
     // Refresh profile data
     await fetchStoreProfile()
@@ -243,6 +250,12 @@ const saveProfile = async () => {
     }
     
     alert(`❌ ${errorMessage}`)
+    
+    // Reset file input on error as well
+    selectedLogoFile.value = null
+    if (logoInput.value) {
+      logoInput.value.value = ''
+    }
   } finally {
     saving.value = false
   }
