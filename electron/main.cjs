@@ -177,22 +177,45 @@ function createWindow() {
       setTimeout(() => {
         win.webContents.executeJavaScript(`
           try {
-            // Safe input enabler function
+            // Safe input enabler function with CSS preservation
             function forceEnableInputs() {
               try {
                 const inputs = document.querySelectorAll('input, textarea, select, button');
                 let fixedCount = 0;
                 inputs.forEach(input => {
                   if (input && input.style) {
+                    // Save original classes and styles
+                    const originalClass = input.className;
+                    const originalBorder = input.style.border;
+                    const originalBackground = input.style.backgroundColor;
+                    const originalPadding = input.style.padding;
+                    const originalBorderRadius = input.style.borderRadius;
+                    
+                    // Fix functionality
                     input.disabled = false;
+                    input.readOnly = false;
+                    
+                    // Restore only essential styles, preserve CSS classes
                     input.style.pointerEvents = 'auto';
                     input.style.userSelect = 'text';
                     input.style.webkitUserSelect = 'text';
+                    input.style.opacity = '';
+                    input.style.cursor = '';
+                    
+                    // Preserve original styling
+                    if (originalBorder) input.style.border = originalBorder;
+                    if (originalBackground) input.style.backgroundColor = originalBackground;
+                    if (originalPadding) input.style.padding = originalPadding;
+                    if (originalBorderRadius) input.style.borderRadius = originalBorderRadius;
+                    
+                    // Ensure CSS classes are preserved
+                    if (originalClass) input.className = originalClass;
+                    
                     fixedCount++;
                   }
                 });
                 if (fixedCount > 0) {
-                  console.log('🔓 Windows Fix: Enabled', fixedCount, 'inputs');
+                  console.log('🔓 Windows Fix: Enabled', fixedCount, 'inputs with CSS preserved');
                 }
               } catch (err) {
                 console.warn('Input fix error:', err.message);
@@ -200,19 +223,29 @@ function createWindow() {
             }
             
             // Run immediately if DOM is ready
-            if (document.readyState === 'loading') {
-              document.addEventListener('DOMContentLoaded', forceEnableInputs);
-            } else {
-              forceEnableInputs();
+            if (document && document.readyState) {
+              if (document.readyState === 'loading') {
+                if (document.addEventListener) {
+                  document.addEventListener('DOMContentLoaded', forceEnableInputs);
+                }
+              } else {
+                forceEnableInputs();
+              }
             }
             
             // Periodic fix (every 3 seconds)
-            setInterval(forceEnableInputs, 3000);
+            if (typeof setInterval !== 'undefined') {
+              setInterval(forceEnableInputs, 3000);
+            }
             
-            // Fix after form interactions
-            document.addEventListener('submit', () => {
-              setTimeout(forceEnableInputs, 200);
-            }, true);
+            // Fix after form interactions (safe)
+            if (document && document.addEventListener) {
+              document.addEventListener('submit', () => {
+                if (typeof setTimeout !== 'undefined') {
+                  setTimeout(forceEnableInputs, 200);
+                }
+              }, true);
+            }
             
             console.log('✅ Windows input fix initialized');
             

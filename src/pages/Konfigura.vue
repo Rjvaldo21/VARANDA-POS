@@ -202,14 +202,32 @@ const saveProfile = async () => {
     // Re-enable all inputs after DOM update (Windows Electron fix)
     await nextTick()
     setTimeout(() => {
-      const inputs = document.querySelectorAll('input, textarea, select')
+      const inputs = document.querySelectorAll('input, textarea, select, button')
       inputs.forEach(input => {
+        // Save original classes
+        const originalClass = input.className
+        const originalStyle = input.getAttribute('style') || ''
+        
+        // Fix functionality
         input.removeAttribute('disabled')
+        input.readOnly = false
+        
+        // Restore essential functionality while preserving CSS
         input.style.pointerEvents = 'auto'
         input.style.userSelect = 'text'
-        input.tabIndex = 0
+        input.style.webkitUserSelect = 'text'
+        input.style.opacity = ''
+        input.style.cursor = ''
+        
+        // Preserve CSS classes
+        if (originalClass) {
+          input.className = originalClass
+        }
+        
+        // Ensure tabIndex
+        if (input.tabIndex < 0) input.tabIndex = 0
       })
-      console.log('🔓 Re-enabled inputs after logo save')
+      console.log('🔓 Re-enabled inputs after logo save with CSS preserved')
     }, 100)
 
     alert('✅ Store profile saved successfully!')
