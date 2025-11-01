@@ -1,9 +1,8 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n' 
 import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
-import fixInputsAfterSave from '@/utils/windowsElectronFix.js'
 
 const { t } = useI18n()
 
@@ -201,9 +200,6 @@ const saveProfile = async () => {
     await fetchStoreProfile()
 
     alert('✅ Store profile saved successfully!')
-    
-    // Windows Electron fix: Multiple approaches
-    await fixInputsAfterSave()
     
   } catch (error) {
     console.error('❌ Failed to save store profile:', error)

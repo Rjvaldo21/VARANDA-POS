@@ -149,57 +149,17 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     backgroundColor: '#ffffff',
-    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      webSecurity: false,  // Try disabling web security
-      allowRunningInsecureContent: true,
-      experimentalFeatures: true,
+      webSecurity: true,
       preload: path.join(__dirname, 'preload.js')
     }
   })
 
   win.removeMenu()
   win.setMenuBarVisibility(false)
-
-  // Show window only after content is loaded to prevent input focus issues
-  win.once('ready-to-show', () => {
-    win.show()
-    win.focus()
-  })
-
-  // Windows-specific: Handle window focus events - SAFE VERSION
-  if (process.platform === 'win32') {
-    win.on('focus', () => {
-      console.log('🎯 Window focused - ensuring inputs work')
-      // Use simpler, safer approach
-      setTimeout(() => {
-        win.webContents.executeJavaScript(`
-          try {
-            const inputs = document.querySelectorAll('input:disabled, textarea:disabled, select:disabled');
-            for (let i = 0; i < inputs.length; i++) {
-              inputs[i].disabled = false;
-            }
-            inputs.length;
-          } catch (e) {
-            0;
-          }
-        `).then(count => {
-          if (count > 0) {
-            console.log('🔓 Focus: Enabled', count, 'disabled inputs')
-          }
-        }).catch(() => {
-          // Silent fail
-        })
-      }, 200)
-    })
-
-    win.on('blur', () => {
-      console.log('🎯 Window blurred')
-    })
-  }
 
 
   if (app.isPackaged) {
@@ -236,39 +196,6 @@ ipcMain.handle('open-file-dialog', async () => {
     properties: ['openFile']
   })
   return canceled ? null : filePaths[0]
-})
-
-// Windows input fix via IPC - SAFE VERSION
-ipcMain.handle('fix-inputs', async () => {
-  const windows = BrowserWindow.getAllWindows()
-  if (windows.length > 0) {
-    const win = windows[0]
-    try {
-      // Simple, safe script without complex logic
-      const result = await win.webContents.executeJavaScript(`
-        try {
-          let count = 0;
-          const elements = document.querySelectorAll('input, textarea, select, button');
-          for (let i = 0; i < elements.length; i++) {
-            const el = elements[i];
-            if (el) {
-              el.disabled = false;
-              count++;
-            }
-          }
-          count;
-        } catch (e) {
-          0;
-        }
-      `)
-      console.log('✅ IPC: Fixed', result, 'inputs')
-      return result > 0
-    } catch (error) {
-      console.error('❌ IPC input fix failed:', error)
-      return false
-    }
-  }
-  return false
 })
 
 app.whenReady().then(() => {
