@@ -50,6 +50,31 @@ const resetLogo = () => {
   }
 }
 
+const clearForm = () => {
+  // Reset all form fields to initial state
+  storeName.value = ''
+  storeAddress.value = ''
+  storeLocation.value = ''
+  storeVersion.value = ''
+  
+  // Reset logo
+  resetLogo()
+  
+  // Reset other settings
+  taxEnabled.value = false
+  taxRate.value = ''
+  useName.value = false
+  autoCapitalize.value = false
+  useMinOrder.value = false
+  allowZeroStock.value = false
+  machineId.value = 'Cashier 1'
+  
+  // Reset saving state
+  saving.value = false
+  
+  console.log('🔄 Form cleared to initial state')
+}
+
 const onLogoSelected = (event) => {
   const file = event.target.files[0]
   if (file) {
@@ -197,16 +222,14 @@ const saveProfile = async () => {
 
     console.log('✅ Store profile saved successfully')
     
-    // Reset file input and selected file after successful save
-    selectedLogoFile.value = null
-    if (logoInput.value) {
-      logoInput.value.value = '' // Reset file input
-    }
-    
-    // Refresh profile data
-    await fetchStoreProfile()
-
+    // Show success message first
     alert('✅ Store profile saved successfully!')
+    
+    // Clear form to ensure all inputs are fresh and workable
+    clearForm()
+    
+    // Refresh profile data to reload from server
+    await fetchStoreProfile()
     
   } catch (error) {
     console.error('❌ Failed to save store profile:', error)
@@ -251,11 +274,8 @@ const saveProfile = async () => {
     
     alert(`❌ ${errorMessage}`)
     
-    // Reset file input on error as well
-    selectedLogoFile.value = null
-    if (logoInput.value) {
-      logoInput.value.value = ''
-    }
+    // Clear form on error to reset everything
+    clearForm()
   } finally {
     saving.value = false
   }
@@ -289,14 +309,26 @@ const buildLogoUrl = (path) => {
           <p class="text-sm text-gray-600">{{ t('settings.title') }}</p>
         </div>
       </div>
-      <button 
-        @click="saveProfile" 
-        :disabled="saving"
-        class="px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors flex items-center"
-        :class="saving 
-          ? 'bg-gray-400 cursor-not-allowed' 
-          : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'"
-      >
+      <div class="flex gap-2">
+        <button 
+          @click="clearForm" 
+          :disabled="saving"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+          :class="saving ? 'opacity-50 cursor-not-allowed' : ''"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          {{ t('common.clear') || 'Clear' }}
+        </button>
+        <button 
+          @click="saveProfile" 
+          :disabled="saving"
+          class="px-4 py-2 text-sm font-medium text-white border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors flex items-center"
+          :class="saving 
+            ? 'bg-gray-400 cursor-not-allowed' 
+            : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'"
+        >
         <svg v-if="saving" class="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
