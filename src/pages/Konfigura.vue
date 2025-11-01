@@ -42,12 +42,22 @@ const logoSrc = computed(() => {
 })
 
 const resetLogo = () => {
-  logoUrl.value = ''
+  // Use cancel image upload to restore state properly
+  cancelImageUpload()
+}
+
+const cancelImageUpload = () => {
+  // Reset image upload state completely
   selectedLogoFile.value = null
+  logoUrl.value = ''
+  logoVer.value = Date.now()
+  
   // Reset file input
   if (logoInput.value) {
     logoInput.value.value = ''
   }
+  
+  console.log('🔄 Image upload cancelled - state restored')
 }
 
 const clearForm = () => {
@@ -57,8 +67,8 @@ const clearForm = () => {
   storeLocation.value = ''
   storeVersion.value = ''
   
-  // Reset logo
-  resetLogo()
+  // Cancel any image upload to restore state
+  cancelImageUpload()
   
   // Reset other settings
   taxEnabled.value = false
@@ -225,10 +235,10 @@ const saveProfile = async () => {
     // Show success message first
     alert('✅ Store profile saved successfully!')
     
-    // Clear form to ensure all inputs are fresh and workable
-    clearForm()
+    // Cancel image upload to restore form state like after cancel
+    cancelImageUpload()
     
-    // Refresh profile data to reload from server
+    // Refresh profile data to reload from server (this will restore form values)
     await fetchStoreProfile()
     
   } catch (error) {
@@ -274,8 +284,8 @@ const saveProfile = async () => {
     
     alert(`❌ ${errorMessage}`)
     
-    // Clear form on error to reset everything
-    clearForm()
+    // Cancel image upload to restore state
+    cancelImageUpload()
   } finally {
     saving.value = false
   }
@@ -395,6 +405,7 @@ const buildLogoUrl = (path) => {
                   <div class="flex gap-2 mb-2">
                     <button @click="triggerLogoPicker" class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors">{{ t('common.edit') }}</button>
                     <button @click="resetLogo" class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors">{{ t('common.reset') }}</button>
+                    <button v-if="selectedLogoFile" @click="cancelImageUpload" class="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors">Cancel Upload</button>
                   </div>
                   <p class="text-xs text-gray-500">Square logo recommended. Max size: 512x512px</p>
                 </div>
