@@ -30,16 +30,55 @@ export async function fixInputsViaIPC() {
 
 // Approach 3: Direct DOM fix
 export function fixInputsDirectly() {
-  if (navigator.platform.includes('Win')) {
+  try {
     const inputs = document.querySelectorAll('input, textarea, select, button')
+    let fixedCount = 0
+    
     inputs.forEach(input => {
-      input.disabled = false
-      input.readOnly = false
+      if (input) {
+        const wasDisabled = input.disabled
+        input.disabled = false
+        input.readOnly = false
+        if (wasDisabled) fixedCount++
+      }
     })
-    console.log('🔄 Windows Electron: Direct DOM fix applied to', inputs.length, 'inputs')
+    
+    console.log('🔄 Windows Electron: Direct DOM fix applied to', inputs.length, 'inputs,', fixedCount, 'were disabled')
     return inputs.length
+  } catch (error) {
+    console.error('❌ Direct DOM fix failed:', error)
+    return 0
   }
-  return 0
+}
+
+// Debug utility
+export function debugInputStates() {
+  const inputs = document.querySelectorAll('input, textarea, select, button')
+  const disabled = document.querySelectorAll('input:disabled, textarea:disabled, select:disabled, button:disabled')
+  
+  console.log('🔍 Input Debug:', {
+    total: inputs.length,
+    disabled: disabled.length,
+    platform: navigator.platform,
+    electronAPI: !!window.electronAPI,
+    userAgent: navigator.userAgent
+  })
+  
+  if (disabled.length > 0) {
+    console.log('🔍 Disabled inputs:', Array.from(disabled).map(input => ({
+      tag: input.tagName,
+      type: input.type,
+      id: input.id,
+      class: input.className,
+      disabled: input.disabled,
+      readonly: input.readOnly
+    })))
+  }
+  
+  return {
+    total: inputs.length,
+    disabled: disabled.length
+  }
 }
 
 // Combined approach
@@ -70,3 +109,9 @@ export async function fixInputsAfterSave(useIPC = true) {
 }
 
 export default fixInputsAfterSave
+
+// Expose debug functions globally for testing
+if (typeof window !== 'undefined') {
+  window.debugInputs = debugInputStates
+  window.fixInputs = fixInputsDirectly
+}
