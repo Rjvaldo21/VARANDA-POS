@@ -154,7 +154,9 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      webSecurity: true,
+      webSecurity: false,  // Try disabling web security
+      allowRunningInsecureContent: true,
+      experimentalFeatures: true,
       preload: path.join(__dirname, 'preload.js')
     }
   })
@@ -167,6 +169,24 @@ function createWindow() {
     win.show()
     win.focus()
   })
+
+  // Windows-specific: Handle window focus events
+  if (process.platform === 'win32') {
+    win.on('focus', () => {
+      console.log('🎯 Window focused - ensuring inputs work')
+      win.webContents.executeJavaScript(`
+        setTimeout(() => {
+          const inputs = document.querySelectorAll('input:disabled, textarea:disabled, select:disabled');
+          inputs.forEach(input => input.disabled = false);
+          console.log('🔓 Enabled', inputs.length, 'disabled inputs on focus');
+        }, 100);
+      `).catch(() => {})
+    })
+
+    win.on('blur', () => {
+      console.log('🎯 Window blurred')
+    })
+  }
 
 
   if (app.isPackaged) {
@@ -203,6 +223,30 @@ ipcMain.handle('open-file-dialog', async () => {
     properties: ['openFile']
   })
   return canceled ? null : filePaths[0]
+})
+
+// Windows input fix via IPC
+ipcMain.handle('fix-inputs', async () => {
+  const windows = BrowserWindow.getAllWindows()
+  if (windows.length > 0) {
+    const win = windows[0]
+    try {
+      await win.webContents.executeJavaScript(`
+        const inputs = document.querySelectorAll('input, textarea, select, button');
+        inputs.forEach(input => {
+          input.disabled = false;
+          input.readOnly = false;
+        });
+        console.log('🔓 IPC: Fixed', inputs.length, 'inputs');
+        return inputs.length;
+      `)
+      return true
+    } catch (error) {
+      console.error('❌ IPC input fix failed:', error)
+      return false
+    }
+  }
+  return false
 })
 
 app.whenReady().then(() => {

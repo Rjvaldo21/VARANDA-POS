@@ -3,7 +3,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n' 
 import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
-import { reloadAfterSave } from '@/utils/windowsElectronFix.js'
+import fixInputsAfterSave from '@/utils/windowsElectronFix.js'
 
 const { t } = useI18n()
 
@@ -202,8 +202,8 @@ const saveProfile = async () => {
 
     alert('✅ Store profile saved successfully!')
     
-    // Windows Electron fix: Reload page after save
-    reloadAfterSave()
+    // Windows Electron fix: Multiple approaches
+    await fixInputsAfterSave()
     
   } catch (error) {
     console.error('❌ Failed to save store profile:', error)
