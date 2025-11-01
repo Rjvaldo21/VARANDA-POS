@@ -1,10 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { useInputManager } from '@/plugins/inputManager.js'
 import { useI18n } from 'vue-i18n' 
 import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
 
 const { t } = useI18n()
+const { enableInputs, isActive: inputManagerActive } = useInputManager()
 
 const logoUrl = ref('')
 const storeName = ref('')
@@ -201,16 +203,9 @@ const saveProfile = async () => {
 
     // Re-enable all inputs after DOM update (Windows Electron fix)
     await nextTick()
-    setTimeout(() => {
-      const inputs = document.querySelectorAll('input, textarea, select')
-      inputs.forEach(input => {
-        input.removeAttribute('disabled')
-        input.style.pointerEvents = 'auto'
-        input.style.userSelect = 'text'
-        input.tabIndex = 0
-      })
-      console.log('🔓 Re-enabled inputs after logo save')
-    }, 100)
+    if (inputManagerActive) {
+      enableInputs('logo-save-success')
+    }
 
     alert('✅ Store profile saved successfully!')
     
