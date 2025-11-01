@@ -168,47 +168,62 @@ function createWindow() {
     win.focus()
   })
 
-  // Windows Electron Input Fix - SIMPLE VERSION
+  // Windows Electron Input Fix - SAFE VERSION
   if (process.platform === 'win32') {
-    win.webContents.on('dom-ready', () => {
+    win.webContents.once('dom-ready', () => {
       console.log('🎯 Windows Electron: Initializing input fix')
       
-      win.webContents.executeJavaScript(`
-        // Simple input enabler function
-        function forceEnableInputs() {
-          const inputs = document.querySelectorAll('input, textarea, select, button');
-          inputs.forEach(input => {
-            input.disabled = false;
-            input.readOnly = false;
-            input.style.pointerEvents = 'auto';
-            input.style.userSelect = 'text';
-            input.style.webkitUserSelect = 'text';
-            input.style.cursor = '';
-            if (input.tabIndex < 0) input.tabIndex = 0;
-          });
-          console.log('🔓 Fixed', inputs.length, 'inputs');
-        }
-        
-        // Run immediately
-        forceEnableInputs();
-        
-        // Run after page loads
-        document.addEventListener('DOMContentLoaded', forceEnableInputs);
-        
-        // Run periodically (every 2 seconds)
-        setInterval(forceEnableInputs, 2000);
-        
-        // Run after any click (catches form submissions, saves, etc)
-        document.addEventListener('click', () => {
-          setTimeout(forceEnableInputs, 100);
-        }, true);
-        
-        // Run after any input change
-        document.addEventListener('input', () => {
-          setTimeout(forceEnableInputs, 50);
-        }, true);
-      `)
-    })
+      // Wait a bit for DOM to be fully ready
+      setTimeout(() => {
+        win.webContents.executeJavaScript(`
+          try {
+            // Safe input enabler function
+            function forceEnableInputs() {
+              try {
+                const inputs = document.querySelectorAll('input, textarea, select, button');
+                let fixedCount = 0;
+                inputs.forEach(input => {
+                  if (input && input.style) {
+                    input.disabled = false;
+                    input.style.pointerEvents = 'auto';
+                    input.style.userSelect = 'text';
+                    input.style.webkitUserSelect = 'text';
+                    fixedCount++;
+                  }
+                });
+                if (fixedCount > 0) {
+                  console.log('🔓 Windows Fix: Enabled', fixedCount, 'inputs');
+                }
+              } catch (err) {
+                console.warn('Input fix error:', err.message);
+              }
+            }
+            
+            // Run immediately if DOM is ready
+            if (document.readyState === 'loading') {
+              document.addEventListener('DOMContentLoaded', forceEnableInputs);
+            } else {
+              forceEnableInputs();
+            }
+            
+            // Periodic fix (every 3 seconds)
+            setInterval(forceEnableInputs, 3000);
+            
+            // Fix after form interactions
+            document.addEventListener('submit', () => {
+              setTimeout(forceEnableInputs, 200);
+            }, true);
+            
+            console.log('✅ Windows input fix initialized');
+            
+          } catch (error) {
+            console.error('Failed to initialize input fix:', error);
+          }
+        `).catch(err => {
+          console.error('JavaScript injection failed:', err);
+        });
+      }, 1000);
+    });
   }
 
   if (app.isPackaged) {

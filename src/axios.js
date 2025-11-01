@@ -50,23 +50,6 @@ api.interceptors.response.use(
       status: response.status,
       data: response.data
     })
-    
-    // Windows Electron Fix: Re-enable inputs after successful API calls
-    if (window.electronAPI) {
-      // We're in Electron, apply Windows input fix
-      setTimeout(() => {
-        const inputs = document.querySelectorAll('input, textarea, select')
-        inputs.forEach(input => {
-          input.removeAttribute('disabled')
-          input.style.pointerEvents = 'auto'
-          input.style.userSelect = 'text'
-          input.style.webkitUserSelect = 'text'
-          input.tabIndex = input.tabIndex || 0
-        })
-        console.log('🔓 Auto-enabled inputs after API response (Windows Electron fix)')
-      }, 50)
-    }
-    
     return response
   },
   async error => {
@@ -108,22 +91,6 @@ api.interceptors.response.use(
         console.log('✅ Token refreshed successfully')
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
-        
-        // Apply Windows Electron input fix after token refresh
-        if (window.electronAPI) {
-          setTimeout(() => {
-            const inputs = document.querySelectorAll('input, textarea, select')
-            inputs.forEach(input => {
-              input.removeAttribute('disabled')
-              input.style.pointerEvents = 'auto'
-              input.style.userSelect = 'text'
-              input.style.webkitUserSelect = 'text'
-              input.tabIndex = input.tabIndex || 0
-            })
-            console.log('🔓 Re-enabled inputs after token refresh (Windows Electron fix)')
-          }, 100)
-        }
-        
         return api(originalRequest)
       } catch (refreshError) {
         console.error('❌ Token refresh failed:', refreshError)
