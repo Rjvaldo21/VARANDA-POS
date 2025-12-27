@@ -397,3 +397,21 @@ a, .link {
     max-width: calc(100vw - 1rem);
   }
 }
+
+/* ===== Electron-safe UI fix ===== */
+
+.footer-actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  height: 64px;            /* WAJIB fixed */
+  z-index: 50;
+
+  pointer-events: auto;
+}
+
+.footer-actions * {
+  pointer-events: auto;
+}
