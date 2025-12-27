@@ -104,14 +104,16 @@ const canManageStations = computed(() => {
 // Methods
 const loadStations = async () => {
   try {
-    loading.value = true
+    loading.value = true 
+  await nextTick()
     // In a real app, this would be an API call
     // const response = await api.get('cashier-stations/')
     // stationList.value = response.data
   } catch (error) {
     console.error('Error loading stations:', error)
     alert('Error loading stations')
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }
@@ -156,7 +158,8 @@ const populateForm = (station) => {
 
 const saveStation = async () => {
   try {
-    loading.value = true
+    loading.value = true 
+  await nextTick()
     
     if (editingStation.value) {
       // Update station
@@ -177,7 +180,8 @@ const saveStation = async () => {
   } catch (error) {
     console.error('Error saving station:', error)
     alert('Error saving station')
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }

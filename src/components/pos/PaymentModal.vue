@@ -180,7 +180,8 @@ const confirmPayment = async () => {
   // Cash flow lama tetap
   if (method.value === 'cash') {
     if (loading.value) return
-    loading.value = true
+    loading.value = true 
+  await nextTick()
     try {
       const invoiceId = 'INV' + Date.now()
       const basePayload = {
@@ -215,7 +216,8 @@ const confirmPayment = async () => {
       return
     }
     if (loading.value) return
-    loading.value = true
+    loading.value = true 
+  await nextTick()
     try {
       const invoiceId = 'INV' + Date.now()
       // Jika fee dibayar customer → total transaksi = gross

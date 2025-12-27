@@ -115,14 +115,16 @@ async function fetchStore() {
 }
 
 async function fetchBanks() {
-  loading.value = true
+  loading.value = true 
+  await nextTick()
   try {
     const res = await api.get('/banks/')
     banks.value = Array.isArray(res.data) ? res.data : res.data?.results || []
     selectedBank.value = null
   } catch (err) {
     console.error('Failed to fetch banks:', err)
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }

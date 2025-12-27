@@ -116,7 +116,8 @@ const saveSupplier = async () => {
   }
 
   try {
-    loading.value = true
+    loading.value = true 
+  await nextTick()
     console.log('📦 Saving supplier...', selectedSupplier.value ? 'UPDATE' : 'CREATE')
     
     const payload = {
@@ -182,7 +183,8 @@ const saveSupplier = async () => {
     }
     
     alert(errorMessage)
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }

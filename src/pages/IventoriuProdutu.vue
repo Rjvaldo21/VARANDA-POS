@@ -216,7 +216,8 @@ const saveProduct = async () => {
   }
 
   try {
-    loading.value = true
+    loading.value = true 
+  await nextTick()
     console.log('📦 Saving product...', editingProduct.value ? 'UPDATE' : 'CREATE')
     
     const payload = {
@@ -297,7 +298,8 @@ const saveProduct = async () => {
     }
     
     alert(errorMessage)
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }

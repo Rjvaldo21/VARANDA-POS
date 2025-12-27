@@ -99,7 +99,8 @@ const editItem = (customer) => {
 }
 
 const fetchCustomers = async () => {
-  loading.value = true
+  loading.value = true 
+  await nextTick()
   try {
     console.log('🔄 Loading customers...')
     const response = await api.get('customers/')
@@ -119,7 +120,8 @@ const fetchCustomers = async () => {
   } catch (error) {
     console.error('❌ Failed to fetch customers:', error)
     customers.value = []
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }

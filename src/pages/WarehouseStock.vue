@@ -107,7 +107,8 @@ const filteredStock = computed(() => {
 })
 
 onMounted(async () => {
-  isLoading.value = true
+  isloading.value = true 
+  await nextTick()
   await fetchStoreProfile()
   await fetchStockData()
   isLoading.value = false

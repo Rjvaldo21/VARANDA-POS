@@ -111,7 +111,8 @@ const handleFileUpload = async (type) => {
     return
   }
 
-  isUploading.value = true
+  isUploading.value = true 
+  await nextTick()
   uploadProgress.value = 0
   uploadMessage.value = 'Uploading file...'
   uploadStatus.value = ''

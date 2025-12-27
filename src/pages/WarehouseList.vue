@@ -71,7 +71,8 @@ const fetchStore = async () => {
 }
 
 const fetchWarehouses = async () => {
-  loading.value = true
+  loading.value = true 
+  await nextTick()
   try {
     const token = localStorage.getItem('token')
     const res = await api.get('warehouses/', {
@@ -81,7 +82,8 @@ const fetchWarehouses = async () => {
     selectedWarehouse.value = null
   } catch (err) {
     console.error('Failed to fetch warehouses:', err)
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }

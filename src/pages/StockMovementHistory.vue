@@ -155,7 +155,8 @@ const totalQuantityMoved = computed(() =>
 )
 
 onMounted(async () => {
-  isLoading.value = true
+  isloading.value = true 
+  await nextTick()
   await fetchStoreProfile()
   await fetchMovements()
   isLoading.value = false

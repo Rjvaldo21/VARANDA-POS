@@ -115,7 +115,8 @@ const deleteItem = async (unit) => {
 }
 
 const fetchUnits = async () => {
-  loading.value = true
+  loading.value = true 
+  await nextTick()
   try {
     console.log('🔄 Loading units...')
     const res = await api.get('units/')
@@ -125,7 +126,8 @@ const fetchUnits = async () => {
   } catch (error) {
     console.error('❌ Failed to fetch units:', error)
     units.value = []
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }

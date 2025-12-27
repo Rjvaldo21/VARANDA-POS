@@ -155,7 +155,8 @@ const saveTransfer = async () => {
 }
 
 onMounted(async () => {
-  isLoading.value = true
+  isloading.value = true 
+  await nextTick()
   await fetchStoreProfile()
   await fetchWarehouses()
   await fetchProducts()

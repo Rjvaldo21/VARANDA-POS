@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n' 
 import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
@@ -149,6 +149,12 @@ const fetchLocations = async () => {
 }
 
 const fetchStoreProfile = async () => {
+
+  if (saving.value) {
+    console.warn('Skip hydrate during saving')
+    return
+  }
+
   try {
     const res = await api.get('store-profile/')
     if (res.data && res.data.length > 0) {
@@ -179,6 +185,7 @@ const saveProfile = async () => {
   }
 
   saving.value = true
+  await nextTick()
   try {
     console.log('🔄 Saving store profile...')
     
@@ -287,6 +294,7 @@ const saveProfile = async () => {
     // Cancel image upload to restore state
     cancelImageUpload()
   } finally {
+    await nextTick();
     saving.value = false
   }
 }

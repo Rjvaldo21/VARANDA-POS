@@ -222,14 +222,16 @@ const fmtDate = (d) => {
 }
 
 const fetchReturns = async () => {
-  loading.value = true
+  loading.value = true 
+  await nextTick()
   try {
     const res = await api.get('product-returns/')
     returns.value = Array.isArray(res.data) ? res.data : res.data.results ?? []
     selectedReturn.value = null
   } catch (err) {
     console.error('Failed to fetch returns:', err)
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }

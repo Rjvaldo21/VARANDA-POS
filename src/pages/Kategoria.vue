@@ -199,7 +199,8 @@ const deleteKategori = async (category) => {
 }
 
 const refresh = async () => {
-  loading.value = true
+  loading.value = true 
+  await nextTick()
   try {
     console.log('🔄 Loading categories...')
     const response = await api.get('categories/')
@@ -209,7 +210,8 @@ const refresh = async () => {
   } catch (err) {
     console.error('❌ Failed to refresh categories:', err)
     categories.value = []
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }

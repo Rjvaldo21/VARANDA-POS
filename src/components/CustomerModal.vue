@@ -17,7 +17,8 @@ const filteredCustomers = computed(() => {
 })
 
 const searchCustomers = async () => {
-  loading.value = true
+  loading.value = true 
+  await nextTick()
   try {
     const res = await api.get('/customers/')
     customers.value = res.data

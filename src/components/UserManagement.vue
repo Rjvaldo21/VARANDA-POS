@@ -757,13 +757,15 @@ const isFormValid = computed(() => {
 // Methods
 const loadUsers = async () => {
   try {
-    loading.value = true
+    loading.value = true 
+  await nextTick()
     const response = await api.get('/api/users/')
     users.value = response.data
   } catch (error) {
     console.error('Error loading users:', error)
     alert('Error loading users')
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }
@@ -934,13 +936,15 @@ const resetPassword = async () => {
   if (!confirmed) return
   
   try {
-    loading.value = true
+    loading.value = true 
+  await nextTick()
     await api.post(`/api/users/${editingUser.value.id}/reset-password/`)
     alert('Password reset email sent to user successfully')
   } catch (error) {
     console.error('Error resetting password:', error)
     alert('Error resetting password: ' + (error.response?.data?.detail || 'Unknown error'))
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }
@@ -967,7 +971,8 @@ const populateForm = (user) => {
 
 const saveUser = async () => {
   try {
-    loading.value = true
+    loading.value = true 
+  await nextTick()
     
     if (editingUser.value) {
       // Update user
@@ -985,7 +990,8 @@ const saveUser = async () => {
   } catch (error) {
     console.error('Error saving user:', error)
     alert('Error saving user: ' + (error.response?.data?.detail || 'Unknown error'))
-  } finally {
+  } finally { 
+    await nextTick();
     loading.value = false
   }
 }
