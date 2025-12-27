@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
 

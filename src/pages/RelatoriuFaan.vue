@@ -1,6 +1,6 @@
 <script setup>
 import api, { baseURL } from '@/axios'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
 import { useI18n } from 'vue-i18n'
 

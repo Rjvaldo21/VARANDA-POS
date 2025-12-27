@@ -597,7 +597,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import api from '../axios'
 
 // Reactive state
@@ -758,7 +758,7 @@ const isFormValid = computed(() => {
 const loadUsers = async () => {
   try {
     loading.value = true 
-  await nextTick()
+    await nextTick()
     const response = await api.get('/api/users/')
     users.value = response.data
   } catch (error) {
@@ -937,7 +937,7 @@ const resetPassword = async () => {
   
   try {
     loading.value = true 
-  await nextTick()
+    await nextTick()
     await api.post(`/api/users/${editingUser.value.id}/reset-password/`)
     alert('Password reset email sent to user successfully')
   } catch (error) {
@@ -972,7 +972,7 @@ const populateForm = (user) => {
 const saveUser = async () => {
   try {
     loading.value = true 
-  await nextTick()
+    await nextTick()
     
     if (editingUser.value) {
       // Update user
