@@ -102,7 +102,9 @@ const saveCategory = async () => {
   }
 
   saving.value = true
+  
   try {
+    await nextTick()
     console.log('📦 Saving category...', isEditing.value ? 'UPDATE' : 'CREATE')
     
     const payload = {
