@@ -1,5 +1,5 @@
 <script setup>
-import axios from '@/axios'
+import api, { baseURL } from '@/axios'
 import { ref, computed, onMounted, watch } from 'vue'
 import FooterActions from '@/components/pos/FooterActions.vue'
 
@@ -75,7 +75,7 @@ const perPage = ref(10)
 watch([startDate, endDate], async () => {
   if (!startDate.value || !endDate.value) return
   try {
-    const res = await axios.get('http://localhost:8000/api/transaction-summary/', {
+    const res = await api.get('transaction-summary/', {
       params: {
         start: startDate.value,
         end: endDate.value
@@ -186,7 +186,7 @@ const toRow = (raw) => {
 const fetchTableData = async () => {
   if (!startDate.value || !endDate.value) return
   try {
-    const res = await axios.get('http://localhost:8000/api/transactions/', {
+    const res = await api.get('transactions/', {
       params: { start: startDate.value, end: endDate.value }
     })
     const raw = Array.isArray(res.data) ? res.data : (res.data.results || [])
@@ -231,7 +231,7 @@ const displaySummary = computed(() =>
 
 onMounted(async () => {
   try {
-    const res = await axios.get('http://localhost:8000/api/store-profile/')
+    const res = await api.get('store-profile/')
     if (res.data && res.data.length > 0) {
       store.value = res.data[0]
       console.log('Logo URL:', getLogoUrl(store.value.logo))
@@ -245,126 +245,347 @@ const formattedAddress = computed(() => store.value.address.replace(/\n/g, '<br 
 const getLogoUrl = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
-  return `http://localhost:8000${path}`
+  return `${baseURL.replace("/api/", "")}${path}`
 }
+
+// New UI functions
+const clearFilters = () => {
+  filter.value = {
+    tipe: '',
+    nomor: '',
+    detil: ''
+  }
+  startDate.value = ''
+  endDate.value = ''
+}
+
+const exportData = () => {
+  const headers = ['Date','Type','Number','Details','Amount']
+  const csvData = filteredTransactions.value.map(trx => [
+    trx.date || '',
+    trx.tipe || '',
+    trx.nomor || '',
+    trx.detil || '',
+    trx.total || 0
+  ])
+  
+  const csv = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'transaction_report.csv'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+const viewTransaction = (transaction) => {
+  alert(`View transaction details for: ${transaction?.nomor || 'Unknown Transaction'}`)
+}
+
+const editTransaction = (transaction) => {
+  alert(`Edit transaction: ${transaction?.nomor || 'Unknown Transaction'}`)
+}
+
+// Summary computed properties
+const totalTransactions = computed(() => filteredTransactions.value.length)
+const totalIncome = computed(() => 
+  filteredTransactions.value
+    .filter(t => t.tipe === 'masuk')
+    .reduce((sum, t) => sum + (Number(t.total) || 0), 0)
+)
+const totalExpense = computed(() => 
+  filteredTransactions.value
+    .filter(t => t.tipe === 'keluar')
+    .reduce((sum, t) => sum + (Number(t.total) || 0), 0)
+)
+const netAmount = computed(() => totalIncome.value - totalExpense.value)
 
 </script>
 
 
 <template>
-  <div class="bg-white border border-gray-50 rounded-sm shadow text-sm flex flex-col h-full">
+  <div class="bg-white border border-gray-200 rounded-lg shadow-sm text-sm flex flex-col h-full">
     <!-- Header -->
-    <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
-      <img
-        :src="store.logo_base64 || getLogoUrl(store.logo)"
-        @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
-        class="h-6 w-6 rounded"
-      />
-      <h1 class="text-lg font-semibold">RELATORIU TRANZASAUN</h1>
+    <div class="flex items-center justify-between p-4 border-b border-gray-300 bg-gradient-to-r from-blue-50 to-cyan-50">
+      <div class="flex items-center gap-3">
+        <img
+          :src="store.logo_base64 || getLogoUrl(store.logo)"
+          @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
+          class="h-8 w-8 rounded-lg shadow-sm"
+        />
+        <div>
+          <h1 class="text-xl font-bold text-gray-800">💼 Transaction Report</h1>
+          <p class="text-sm text-gray-600">Comprehensive transaction analysis</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button @click="exportData" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors">
+          <span class="text-sm font-medium">📊 Export Report</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Statistic Cards -->
-      <div class="flex gap-2 p-2 overflow-x-auto">
-        <div class="border rounded-sm px-3 py-2 w-40 text-right">
-          <div class="text-xs text-gray-500 text-left">Rendimentu Brutu</div>
-          <div class="text-lg font-bold">{{ formatCurrency(summary.gross_income) }}</div>
+    <!-- Summary Cards -->
+    <div class="p-4 bg-gray-50 border-b border-gray-200">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Total Transactions Card -->
+        <div class="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-blue-600">Total Transactions</p>
+              <p class="text-xl font-bold text-blue-800">{{ totalTransactions }}</p>
+            </div>
+            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span class="text-blue-600 text-lg">💼</span>
+            </div>
+          </div>
         </div>
-        <div class="border rounded-sm px-3 py-2 w-40 text-right">
-          <div class="text-xs text-gray-500 text-left">Despeza</div>
-          <div class="text-lg font-bold">{{ formatCurrency(summary.expenses) }}</div>
+        
+        <!-- Total Income Card -->
+        <div class="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-green-600">Total Income</p>
+              <p class="text-xl font-bold text-green-800">{{ formatCurrency(totalIncome) }}</p>
+            </div>
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <span class="text-green-600 text-lg">📈</span>
+            </div>
+          </div>
         </div>
-        <div class="border rounded-sm px-3 py-2 w-40 text-right">
-          <div class="text-xs text-gray-500 text-left">Brutu - Despeza</div>
-          <div class="text-lg font-bold">{{ formatCurrency(summary.gross_minus_expenses) }}</div>
+
+        <!-- Total Expenses Card -->
+        <div class="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-red-600">Total Expenses</p>
+              <p class="text-xl font-bold text-red-800">{{ formatCurrency(totalExpense) }}</p>
+            </div>
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <span class="text-red-600 text-lg">📉</span>
+            </div>
+          </div>
         </div>
-        <div class="border rounded-sm px-3 py-2 w-40 text-right">
-          <div class="text-xs text-gray-500 text-left">Rendimentu Líkidu</div>
-          <div class="text-lg font-bold">{{ formatCurrency(summary.net_income) }}</div>
+
+        <!-- Net Amount Card -->
+        <div class="bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-purple-600">Net Amount</p>
+              <p class="text-xl font-bold" :class="netAmount >= 0 ? 'text-green-800' : 'text-red-800'">
+                {{ formatCurrency(netAmount) }}
+              </p>
+            </div>
+            <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+              <span class="text-purple-600 text-lg">💰</span>
+            </div>
+          </div>
         </div>
-        <div class="border rounded-sm px-3 py-2 w-40 text-right">
-          <div class="text-xs text-gray-500 text-left">Lukru/Lakon</div>
-          <div class="text-lg font-bold">{{ formatCurrency(summary.profit_or_loss) }}</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="p-4 bg-white border-b border-gray-200">
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="min-w-[160px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
+          <select @change="handleFilterChange($event)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="today">📅 Today</option>
+            <option value="week">📈 This Week</option>
+            <option value="month">📆 This Month</option>
+            <option value="">🗓️ Custom Range</option>
+          </select>
+        </div>
+        
+        <div class="min-w-[140px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+          <select v-model="filter.tipe" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">All Types</option>
+            <option value="masuk">Income</option>
+            <option value="keluar">Expense</option>
+          </select>
+        </div>
+        
+        <div class="min-w-[180px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Search by Number</label>
+          <input 
+            v-model="filter.nomor" 
+            type="text" 
+            placeholder="Enter transaction number..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Search by Details</label>
+          <input 
+            v-model="filter.detil" 
+            type="text" 
+            placeholder="Enter transaction details..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        <div class="flex items-end gap-2">
+          <button @click="clearFilters" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="p-4 flex flex-col flex-1 overflow-hidden">
+
+      <!-- Custom Date Range Modal -->
+      <div v-if="showDatePopup" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div class="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Select Date Range</h3>
+            <button @click="showDatePopup = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="p-6">
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input 
+                  v-model="manualStart" 
+                  type="date" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input 
+                  v-model="manualEnd" 
+                  type="date" 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-end p-6 border-t border-gray-200 space-x-3">
+            <button 
+              @click="showDatePopup = false" 
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="applyManualDateFilter" 
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              Apply Filter
+            </button>
+          </div>
         </div>
       </div>
 
-    <!-- Table -->
-    <div class="p-2 flex flex-col flex-1 overflow-hidden">
-      <div class="flex-1 overflow-auto border border-gray-300 rounded-sm">
-        <table class="w-full border-collapse text-sm table-fixed">
-          <thead class="bg-gradient-to-b from-white to-gray-100">
-            <tr>
-              <th class="th w-52 align-top">
-                <select @change="handleFilterChange($event)" class="border px-2 py-1 rounded-sm w-full">
-                  <option :value="'today'">📅 {{ todayFormatted }}</option>
-                  <option value="week">📈 Semana</option>
-                  <option value="month">📆 Fulan</option>
-                  <option value="">🗓️ Hili kalendariu</option>
-                </select>
-
-              <!-- Popup Modal di luar table -->
-                <div v-if="showDatePopup" class="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
-                  <div class="bg-white shadow border p-5 rounded w-[300px]">
-                    <div class="text-sm font-semibold mb-3">🛠️ Atur Rentang Tanggal</div>
-
-                    <label class="block text-xs text-gray-600 mb-1">Data Inisiu</label>
-                    <input type="date" v-model="manualStart" class="input w-full mb-2" />
-
-                    <label class="block text-xs text-gray-600 mb-1">Data Final</label>
-                    <input type="date" v-model="manualEnd" class="input w-full mb-4" />
-
-                    <div class="flex justify-end gap-2 text-xs">
-                      <button @click="showDatePopup = false" class="px-2 py-1 border rounded text-gray-600 hover:bg-gray-100">Kansela</button>
-                      <button @click="applyManualDateFilter" class="px-2 py-1 border rounded text-blue-600 hover:bg-blue-50">Ok</button>
-                    </div>
+      <!-- Table -->
+      <div class="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse">
+            <thead class="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Number</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Details</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Amount</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            
+            <tbody class="divide-y divide-gray-200">
+              <tr v-if="filteredTransactions.length === 0">
+                <td colspan="6" class="px-4 py-12 text-center text-gray-500">
+                  <div class="flex flex-col items-center">
+                    <span class="text-4xl mb-2">💼</span>
+                    <p class="text-lg font-medium mb-1">No transactions found</p>
+                    <p class="text-sm">Try adjusting your date range or filters</p>
                   </div>
-                </div>
-                </th>
-              <th class="th w-28">
-                <select v-model="filter.tipe" class="input w-full">
-                  <option value="">Kompletu</option>
-                  <option value="masuk">Tama</option>
-                  <option value="keluar">Sai</option>
-                </select>
-              </th>
-              <th class="th w-36">
-                <input v-model="filter.nomor" type="text" placeholder="Numeru" class="input w-full" />
-              </th>
-              <th class="th">
-                <input v-model="filter.detil" type="text" placeholder="Detalle" class="input w-full" />
-              </th>
-              <th class="th w-24 text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="filteredTransactions.length === 0">
-            </tr>
-            <tr v-for="(trx, index) in filteredTransactions" :key="index">
-              <td class="border px-2 py-1 text-xs">{{ trx.date }}</td>
-              <td class="border px-2 py-1 text-xs capitalize">{{ trx.tipe }}</td>
-              <td class="border px-2 py-1 text-xs">{{ trx.nomor }}</td>
-              <td class="border px-2 py-1 text-xs">{{ trx.detil }}</td>
-              <td class="border px-2 py-1 text-xs text-right">{{ parseFloat(trx.total).toFixed(2) }}</td>
-            </tr>
-          </tbody>
-        </table>
+                </td>
+              </tr>
+              
+              <tr v-else v-for="(trx, index) in filteredTransactions" :key="index" class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ trx.date || 'N/A' }}</div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <span 
+                    class="inline-flex px-2 py-1 text-xs font-medium rounded-full capitalize"
+                    :class="{
+                      'bg-green-100 text-green-800': trx.tipe === 'masuk',
+                      'bg-red-100 text-red-800': trx.tipe === 'keluar',
+                      'bg-gray-100 text-gray-800': !trx.tipe
+                    }"
+                  >
+                    {{ trx.tipe === 'masuk' ? '📈 Income' : trx.tipe === 'keluar' ? '📉 Expense' : 'Unknown' }}
+                  </span>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">{{ trx.nomor || 'N/A' }}</div>
+                </td>
+                
+                <td class="px-4 py-4">
+                  <div class="text-sm text-gray-900 max-w-xs truncate" :title="trx.detil">
+                    {{ trx.detil || 'No details' }}
+                  </div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-right">
+                  <div class="text-sm font-bold" 
+                       :class="trx.tipe === 'masuk' ? 'text-green-600' : trx.tipe === 'keluar' ? 'text-red-600' : 'text-gray-900'">
+                    {{ formatCurrency(parseFloat(trx.total) || 0) }}
+                  </div>
+                </td>
+                
+                <td class="px-4 py-4 whitespace-nowrap text-center">
+                  <div class="flex items-center justify-center space-x-2">
+                    <button 
+                      @click="viewTransaction(trx)"
+                      class="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                      title="View Details"
+                    >
+                      👁️
+                    </button>
+                    <button 
+                      @click="editTransaction(trx)"
+                      class="text-yellow-600 hover:text-yellow-800 font-medium text-sm"
+                      title="Edit Transaction"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- Footer -->
-    <div class="flex justify-between items-center px-2 pb-2 text-xs">
-      <div class="flex items-center gap-1">
-      <select v-model="perPage" class="border px-1 py-0.5 rounded-sm">
-      <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/pagina</option>
-      </select>
-    </div>
-
-      <!-- Action Buttons -->
-      <div class="space-x-2 text-base">
-        <button class="hover:text-blue-600">🔄</button>
-        <button class="hover:text-green-600">➕</button>
-        <button class="hover:text-gray-600">✏️</button>
-        <button class="hover:text-red-600">❌</button>
-        <button class="hover:text-purple-600">⏏️</button>
+      <!-- Pagination Footer -->
+      <div class="flex justify-between items-center mt-4 px-4 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-700">Show:</span>
+          <select v-model="perPage" class="px-2 py-1 border border-gray-300 rounded-md text-sm">
+            <option v-for="n in [10, 20, 50, 100]" :key="n" :value="n">{{ n }} per page</option>
+          </select>
+        </div>
+        <div class="text-sm text-gray-700">
+          Showing {{ filteredTransactions.length }} transaction{{ filteredTransactions.length !== 1 ? 's' : '' }}
+        </div>
       </div>
     </div>
   </div>
@@ -372,31 +593,41 @@ const getLogoUrl = (path) => {
 </template>
 
 <style scoped>
-.input {
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 12px;
+/* Modern utility styles */
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
-.th {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: center;
-  font-weight: 600;
+
+.transition-shadow {
+  transition-property: box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
-.stat-card {
-  background-color: #fefefe;
-  border-radius: 4px;
-  padding: 8px;
-  text-align: left;
-  border: 1px solid #999;
-  min-width: 120px;
-  flex-shrink: 0;
+
+/* Custom focus states */
+input:focus,
+select:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  border-color: transparent;
 }
-.stat-value {
-  font-size: 16px;
-  font-weight: bold;
-  text-align: center;
-  margin-top: 4px;
+
+/* Table improvements */
+table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hover effects */
+.hover\:shadow-md:hover {
+  --tw-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 </style>

@@ -1,17 +1,7 @@
 from rest_framework import serializers
-from .models import Customer, Supplier
-from .models import ProductReturn
-from .models import PurchaseReturn
-from .models import Unit
-from .models import StockAdjustment
-from pos.models import StockMovement
-from .models import Stock
-from .models import StockTransfer
-from .models import Warehouse
-from .models import Bank, BankPayment
+from django.contrib.auth.models import User
 from django.db.models import Sum
-from .models import Transaction, ProductReturn
-from .models import Purchase, PurchaseItem
+from .models import *
 from .models import Purchase
 from django.core.files.base import ContentFile
 from .models import PointsEarningRule, PointsRedemptionRule, PointsLedger, Customer
@@ -41,10 +31,120 @@ class UnitSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']        
 
 
+class ProfileSerializer(serializers.ModelSerializer):
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    role_description = serializers.CharField(read_only=True)
+    permissions = serializers.SerializerMethodField()
+    is_manager_level = serializers.BooleanField(read_only=True)
+    is_admin_level = serializers.BooleanField(read_only=True)
+    can_manage_users = serializers.BooleanField(read_only=True)
+    
+    class Meta:
+        model = Profile
+        fields = [
+            'id', 'role', 'role_display', 'role_description', 'phone', 'address', 
+            'date_hired', 'is_active_employee', 'preferred_shift', 'assigned_warehouse',
+            'permissions', 'is_manager_level', 'is_admin_level', 'can_manage_users',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+    
+    def get_permissions(self, obj):
+        return obj.get_permissions()
+
+
 class UserSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer(read_only=True)
+    full_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+        fields = [
+            'id', 'username', 'first_name', 'last_name', 'email', 
+            'is_active', 'is_staff', 'date_joined', 'last_login',
+            'full_name', 'profile'
+        ]
+        read_only_fields = ['date_joined', 'last_login']
+    
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip() or obj.username
+
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True)
+    profile = ProfileSerializer(required=False)
+    
+    class Meta:
+        model = User
+        fields = [
+            'username', 'first_name', 'last_name', 'email', 
+            'password', 'confirm_password', 'is_active', 'profile'
+        ]
+    
+    def validate(self, attrs):
+        if attrs['password'] != attrs['confirm_password']:
+            raise serializers.ValidationError("Passwords do not match.")
+        return attrs
+    
+    def create(self, validated_data):
+        confirm_password = validated_data.pop('confirm_password')
+        profile_data = validated_data.pop('profile', {})
+        
+        user = User.objects.create_user(**validated_data)
+        
+        # Update profile with provided data
+        if profile_data:
+            profile = user.profile
+            for attr, value in profile_data.items():
+                setattr(profile, attr, value)
+            profile.save()
+        
+        return user
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    profile = ProfileSerializer(required=False)
+    
+    class Meta:
+        model = User
+        fields = [
+            'first_name', 'last_name', 'email', 'is_active', 'profile'
+        ]
+    
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop('profile', {})
+        
+        # Update user fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Update profile
+        if profile_data:
+            profile = instance.profile
+            for attr, value in profile_data.items():
+                setattr(profile, attr, value)
+            profile.save()
+        
+        return instance
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, min_length=8)
+    confirm_new_password = serializers.CharField(required=True)
+    
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_new_password']:
+            raise serializers.ValidationError("New passwords do not match.")
+        return attrs
+    
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("Current password is incorrect.")
+        return value
 
 
 class CustomerSerializer(serializers.ModelSerializer):

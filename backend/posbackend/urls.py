@@ -1,16 +1,14 @@
-from pos.admin import admin_site 
+from django.contrib import admin
 from django.urls import path, include
 from pos import views
 from pos.views import check_db 
 from django.conf import settings
 from django.conf.urls.static import static
-from pos.admin import admin_site
-from django.urls import path, include
 from pos.views import CustomTokenObtainPairView
 from rest_framework_simplejwt.views import TokenRefreshView # type: ignore
 
 urlpatterns = [
-    path('admin/', admin_site.urls),
+    path('admin/', admin.site.urls),
     
     path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

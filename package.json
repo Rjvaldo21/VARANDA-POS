@@ -2,21 +2,31 @@
   "name": "vite-project",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "VARANDA POS desktop version",
   "author": "Nelfarinaunipessoal.lda",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev": "node dev.js",
+    "dev:old": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:full": "node start-dev.js",
+    "vite": "vite",
+    "electron": "electron .",
     "build": "vite build",
     "electron:build": "npm run build && electron-builder",
     "preview": "vite preview",
-    "tw-init": "tailwindcss init -p"
+    "tw-init": "tailwindcss init -p",
+    "setup-backend": "node backend/setup_venv.js",
+    "setup": "npm install && npm run setup-backend",
+    "backend:start": "node -e \"const os = require('os'); const path = require('path'); const { spawn } = require('child_process'); const isWindows = os.platform() === 'win32'; const scriptPath = isWindows ? path.join('backend', 'start_backend.bat') : path.join('backend', 'start_backend.sh'); const cmd = spawn(scriptPath, [], { stdio: 'inherit', shell: isWindows }); cmd.on('error', console.error);\"",
+    "clean": "node -e \"const fs = require('fs'); const path = require('path'); ['backend/venv', 'backend/venv_mac', 'backend/env'].forEach(dir => { try { fs.rmSync(dir, {recursive: true, force: true}); console.log('Removed:', dir); } catch(e) { console.log('Not found:', dir); } });\""
   },
   "dependencies": {
     "axios": "^1.10.0",
     "jwt-decode": "^4.0.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.17",
+    "vue-i18n": "^11.1.12",
     "vue-router": "^4.5.1",
     "vue3-datepicker": "^0.4.0"
   },
@@ -49,7 +59,6 @@
         "to": "media"
       }
     ],
-
     "directories": {
       "buildResources": "assets"
     },

@@ -1,0 +1,43 @@
+# VARANDA-POS Backend Dependencies
+
+# Core Django
+Django>=5.2.0,<5.3.0
+djangorestframework>=3.14.0
+django-cors-headers>=4.0.0
+djangorestframework-simplejwt>=5.2.0
+
+# Environment & Database
+python-dotenv>=1.0.0
+dj-database-url>=2.1.0
+psycopg2-binary>=2.9.0  # PostgreSQL adapter
+
+# File Storage (Cloud)
+boto3>=1.26.0           # AWS S3
+django-storages>=1.13.0
+
+# Security & Rate Limiting
+django-ratelimit>=3.0.0
+django-health-check>=3.17.0
+
+# Production Server
+gunicorn>=20.1.0
+whitenoise>=6.4.0      # Static files serving
+
+# Development Dependencies
+django-extensions>=3.2.0  # Development utilities
+
+# Existing Dependencies (from current project)
+Pillow>=10.0.0         # Image processing
+reportlab>=3.6.0       # PDF generation
+python-barcode>=0.14.0 # Barcode generation
+qrcode>=7.4.0          # QR code generation
+
+# Optional: Caching & Background Tasks
+redis>=4.5.0
+celery[redis]>=5.2.0
+
+# Optional: Monitoring & Logging
+sentry-sdk[django]>=1.32.0
+
+# Optional: API Documentation
+drf-spectacular>=0.26.0

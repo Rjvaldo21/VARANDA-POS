@@ -32,15 +32,64 @@ function prepareDatabase() {
   return userDbPath
 }
 
+function getPythonPath(basePath, isProd) {
+  if (isProd) {
+    // Production: Use bundled Python
+    return process.platform === 'win32' 
+      ? path.join(process.resourcesPath, 'backend', 'python', 'python.exe')
+      : path.join(process.resourcesPath, 'backend', 'python', 'python3')
+  } else {
+    // Development: Auto-detect virtual environment
+    const isWindows = process.platform === 'win32'
+    const isDarwin = process.platform === 'darwin'
+    
+    // Try different virtual environment paths in order of preference
+    const venvPaths = isWindows 
+      ? [
+          path.join(basePath, 'venv', 'Scripts', 'python.exe'),
+          path.join(basePath, 'env', 'Scripts', 'python.exe'),
+          'python.exe',
+          'python'
+        ]
+      : [
+          path.join(basePath, 'venv_mac', 'bin', 'python'),
+          path.join(basePath, 'venv', 'bin', 'python'),
+          path.join(basePath, 'env', 'bin', 'python'),
+          'python3',
+          'python'
+        ]
+    
+    // Check which Python path exists and is executable
+    for (const pythonPath of venvPaths) {
+      try {
+        if (path.isAbsolute(pythonPath)) {
+          if (fs.existsSync(pythonPath)) {
+            console.log(`✅ Found Python at: ${pythonPath}`)
+            return pythonPath
+          }
+        } else {
+          // For system Python, we'll try it anyway
+          console.log(`🔄 Trying system Python: ${pythonPath}`)
+          return pythonPath
+        }
+      } catch (error) {
+        console.log(`❌ Python path not found: ${pythonPath}`)
+      }
+    }
+    
+    // Fallback to system Python
+    console.log('⚠️ No virtual environment found, using system Python')
+    return isWindows ? 'python.exe' : 'python3'
+  }
+}
+
 function startDjangoServer() {
   const isProd = app.isPackaged
   const basePath = isProd
     ? path.join(process.resourcesPath, 'backend')
     : path.join(__dirname, '../backend')
 
-  const pythonPath = isProd
-  ? path.join(process.resourcesPath, 'backend', 'python', 'python.exe')
-  : path.join(basePath, 'python', 'python.exe')
+  const pythonPath = getPythonPath(basePath, isProd)
   const managePyPath = path.join(basePath, 'manage.py')
   const userDbPath = prepareDatabase()  
 
@@ -100,14 +149,11 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     backgroundColor: '#ffffff',
-    titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#ffffff',
-      symbolColor: '#000000',
-      height: 30
-    },
     webPreferences: {
+      nodeIntegration: false,
       contextIsolation: true,
+      enableRemoteModule: false,
+      webSecurity: true,
       preload: path.join(__dirname, 'preload.js')
     }
   })
@@ -115,10 +161,28 @@ function createWindow() {
   win.removeMenu()
   win.setMenuBarVisibility(false)
 
+
   if (app.isPackaged) {
     win.loadFile(path.join(__dirname, '../dist/index.html'))
   } else {
-    win.loadURL('http://localhost:5173')
+    // Try different ports that Vite might use
+    const tryLoadURL = async (ports) => {
+      for (const port of ports) {
+        try {
+          const url = `http://localhost:${port}`
+          console.log(`🔗 Trying to load: ${url}`)
+          await win.loadURL(url)
+          console.log(`✅ Successfully loaded: ${url}`)
+          return
+        } catch (error) {
+          console.log(`❌ Failed to load port ${port}, trying next...`)
+        }
+      }
+      console.error('❌ Could not connect to Vite dev server on any port')
+    }
+    
+    // Try common Vite ports
+    tryLoadURL([5173, 5174, 5175, 3000])
   }
 }
 

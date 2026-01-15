@@ -1,10 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import api, { baseURL } from '@/axios'
 import FooterActions from '@/components/pos/FooterActions.vue'
+import { useI18n } from 'vue-i18n'
 
-/* ================= AXIOS + JWT ================= */
-const api = axios.create({ baseURL: 'http://localhost:8000/api' })
+const { t } = useI18n()
 
 // Helper ambil token dari berbagai kemungkinan key & storage
 const getFromStores = (keys) => {
@@ -21,60 +21,6 @@ const getAccessToken = () =>
 const getRefreshToken = () =>
   getFromStores(['refresh', 'refresh_token'])
 
-// Selalu sisipkan access token terbaru
-api.interceptors.request.use((config) => {
-  const t = getAccessToken()
-  config.headers = config.headers || {}
-  if (t) config.headers.Authorization = `Bearer ${t}`
-  return config
-})
-
-// Auto refresh saat 401 lalu retry request
-let refreshingPromise = null
-api.interceptors.response.use(
-  (r) => r,
-  async (err) => {
-    const resp = err.response
-    const original = resp?.config
-
-    if (resp?.status === 401 && original && !original._retry) {
-      const refresh = getRefreshToken()
-      if (!refresh) {
-        console.warn('[auth] 401 & no refresh token found')
-        return Promise.reject(err)
-      }
-      try {
-        original._retry = true
-        refreshingPromise =
-          refreshingPromise || axios.post('http://localhost:8000/api/token/refresh/', { refresh })
-        const { data } = await refreshingPromise
-        refreshingPromise = null
-        // simpan access baru
-        localStorage.setItem('access', data.access)
-        // retry request sebelumnya
-        original.headers = original.headers || {}
-        original.headers.Authorization = `Bearer ${data.access}`
-        return api(original)
-      } catch (e) {
-        refreshingPromise = null
-        console.error('[auth] refresh gagal, hapus token')
-        localStorage.removeItem('access')
-        localStorage.removeItem('refresh')
-        sessionStorage.removeItem('access')
-        sessionStorage.removeItem('refresh')
-        return Promise.reject(e)
-      }
-    }
-
-    // Error lain -> tampilkan ringkas
-    const status = resp?.status
-    const msg = typeof resp?.data === 'string' ? resp.data : JSON.stringify(resp?.data)
-    console.error('API ERROR', status, msg)
-    alert(`API error ${status || ''}: ${msg}`)
-    return Promise.reject(err)
-  }
-)
-
 // Pastikan ada access token sebelum panggil endpoint protected
 const ensureAuth = async () => {
   let access = getAccessToken()
@@ -82,7 +28,7 @@ const ensureAuth = async () => {
 
   if (!access && refresh) {
     try {
-      const { data } = await axios.post('http://localhost:8000/api/token/refresh/', { refresh })
+      const { data } = await api.post('token/refresh/', { refresh })
       access = data.access
       localStorage.setItem('access', access)
     } catch (e) {
@@ -100,7 +46,7 @@ const ensureAuth = async () => {
 
 /* ================= Header toko ================= */
 const store = ref({ name: '', address: '', logo: '', version: '', location: '' })
-const getLogoUrl = (path) => (!path ? '' : (path.startsWith('http') ? path : `http://localhost:8000${path}`))
+const getLogoUrl = (path) => (!path ? '' : (path.startsWith('http') ? path : `baseURL.replace("/api/", "")${path}`))
 const formattedAddress = computed(() => (store.value.address ? store.value.address.replace(/\n/g, '<br />') : ''))
 
 /* ================= State poin ================= */
@@ -290,94 +236,144 @@ const remove = async (ctx) => {
     <!-- Header -->
     <div class="flex items-center gap-2 p-2 border-b border-gray-300 bg-gray-50">
       <img :src="store.logo_base64 || getLogoUrl(store.logo)"
-           @error="e => e.target.src = 'http://127.0.0.1:8000/media/logos/default.jpg'"
+           @error="e => e.target.src = baseURL.replace('/api/', '') + '/media/logos/default.jpg'"
            class="h-6 w-6 rounded" />
-      <h1 class="text-lg font-semibold">PONTUS</h1>
+      <h1 class="text-lg font-semibold">POINTS MANAGEMENT</h1>
     </div>
 
-    <div class="p-2 flex-1 flex overflow-hidden gap-2">
+    <div class="p-4 flex-1 flex overflow-hidden gap-6">
       <!-- LEFT: Redemption Rules -->
-      <div class="w-1/2 flex flex-col border border-gray-300 rounded-sm overflow-hidden">
-        <div class="text-sm font-semibold px-2 py-1 border-b bg-gray-100">Points redemption rules</div>
+      <div class="w-1/2 flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        <div class="bg-blue-50 px-4 py-3 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+            Points Redemption Rules
+          </h3>
+          <p class="text-sm text-gray-600">Configure how customers can redeem their points</p>
+        </div>
+        
         <div class="flex-1 overflow-auto">
-          <table class="min-w-[700px] w-full border-collapse text-sm table-fixed">
-            <thead class="bg-gradient-to-b from-white to-gray-100">
+          <table class="w-full border-collapse text-sm">
+            <thead class="bg-gray-50">
               <tr>
-                <th class="border px-2 py-1 w-[20%] text-left">Name</th>
-                <th class="border px-2 py-1 w-[15%] text-left">Points required</th>
-                <th class="border px-2 py-1 w-[30%] text-left">Detail</th>
-                <th class="border px-2 py-1 w-[15%] text-left">Discount amount</th>
-                <th class="border px-2 py-1 w-[12%] text-center">Is active</th>
+                <th class="border-b border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Rule Name</th>
+                <th class="border-b border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Points Required</th>
+                <th class="border-b border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Details</th>
+                <th class="border-b border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Discount</th>
+                <th class="border-b border-gray-200 px-3 py-3 text-center font-medium text-gray-700">Active</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-gray-200">
               <tr v-for="row in redeem" :key="row.id" class="hover:bg-gray-50">
-                <td class="border px-2 py-1 truncate" :title="row.name">{{ row.name }}</td>
-                <td class="border px-2 py-1">{{ row.points_required }}</td>
-                <td class="border px-2 py-1 truncate" :title="row.detail">{{ row.detail }}</td>
-                <td class="border px-2 py-1">${{ toMoney(row.discount_amount) }}</td>
-                <td class="border px-2 py-1 text-center">
-                  <input type="checkbox" :checked="row.is_active" @change="(e) => { row.is_active = e.target.checked; toggleActive('redeem', row) }" />
+                <td class="px-3 py-3 font-medium text-gray-900 truncate" :title="row.name">{{ row.name }}</td>
+                <td class="px-3 py-3 text-gray-700">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-800 rounded-full">{{ row.points_required }} pts</span>
+                </td>
+                <td class="px-3 py-3 text-sm text-gray-600 truncate" :title="row.detail">{{ row.detail }}</td>
+                <td class="px-3 py-3 text-sm font-medium text-green-600">${{ toMoney(row.discount_amount) }}</td>
+                <td class="px-3 py-3 text-center">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" :checked="row.is_active" @change="(e) => { row.is_active = e.target.checked; toggleActive('redeem', row) }" class="sr-only peer" />
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div class="flex justify-between items-center px-2 py-1 border-t text-xs bg-white">
-          <div class="flex items-center gap-1">
-            <span>1 / 1</span>
-            <select v-model="perPageLeft" class="border px-1 py-0.5 rounded-sm">
-              <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/page</option>
-            </select>
-          </div>
-          <div class="space-x-2 text-base">
-            <button @click="refresh" class="hover:text-blue-600">🔄</button>
-            <button @click="add('redeem')" class="hover:text-green-600">➕</button>
-            <button @click="edit('redeem')" class="hover:text-gray-600">✏️</button>
-            <button @click="remove('redeem')" class="hover:text-red-600">❌</button>
+        <div class="flex justify-between items-center px-4 py-3 border-t border-gray-200 bg-gray-50">
+          <div class="text-sm text-gray-600">{{ redeem.length }} rule(s)</div>
+          <div class="flex space-x-2">
+            <button @click="refresh" class="text-blue-600 hover:text-blue-900 transition-colors" title="Refresh">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            </button>
+            <button @click="add('redeem')" class="text-green-600 hover:text-green-900 transition-colors" title="Add Rule">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+            </button>
+            <button @click="edit('redeem')" class="text-gray-600 hover:text-gray-900 transition-colors" title="Edit Rule">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+            </button>
+            <button @click="remove('redeem')" class="text-red-600 hover:text-red-900 transition-colors" title="Delete Rule">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
           </div>
         </div>
       </div>
 
       <!-- RIGHT: Earning Rules -->
-      <div class="w-1/2 flex flex-col border border-gray-300 rounded-sm overflow-hidden">
-        <div class="text-sm font-semibold px-2 py-1 border-b bg-gray-100">Points earning rules</div>
+      <div class="w-1/2 flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        <div class="bg-green-50 px-4 py-3 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+            Points Earning Rules
+          </h3>
+          <p class="text-sm text-gray-600">Configure how customers earn points from purchases</p>
+        </div>
+        
         <div class="flex-1 overflow-auto">
-          <table class="min-w-[650px] w-full border-collapse text-sm table-fixed">
-            <thead class="bg-gradient-to-b from-white to-gray-100">
+          <table class="w-full border-collapse text-sm">
+            <thead class="bg-gray-50">
               <tr>
-                <th class="border px-2 py-1 w-[30%] text-left">Name</th>
-                <th class="border px-2 py-1 w-[20%] text-left">Min total</th>
-                <th class="border px-2 py-1 w-[20%] text-left">Points awarded</th>
-                <th class="border px-2 py-1 w-[12%] text-center">Is active</th>
+                <th class="border-b border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Rule Name</th>
+                <th class="border-b border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Minimum Purchase</th>
+                <th class="border-b border-gray-200 px-3 py-3 text-left font-medium text-gray-700">Points Awarded</th>
+                <th class="border-b border-gray-200 px-3 py-3 text-center font-medium text-gray-700">Active</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-gray-200">
               <tr v-for="row in earning" :key="row.id" class="hover:bg-gray-50">
-                <td class="border px-2 py-1 truncate" :title="row.name">{{ row.name }}</td>
-                <td class="border px-2 py-1">${{ toMoney(row.min_total) }}</td>
-                <td class="border px-2 py-1">{{ row.points_awarded }}</td>
-                <td class="border px-2 py-1 text-center">
-                  <input type="checkbox" :checked="row.is_active" @change="(e) => { row.is_active = e.target.checked; toggleActive('earn', row) }" />
+                <td class="px-3 py-3 font-medium text-gray-900 truncate" :title="row.name">{{ row.name }}</td>
+                <td class="px-3 py-3 text-sm font-medium text-gray-700">${{ toMoney(row.min_total) }}</td>
+                <td class="px-3 py-3 text-gray-700">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">{{ row.points_awarded }} pts</span>
+                </td>
+                <td class="px-3 py-3 text-center">
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" :checked="row.is_active" @change="(e) => { row.is_active = e.target.checked; toggleActive('earn', row) }" class="sr-only peer" />
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div class="flex justify-between items-center px-2 py-1 border-t text-xs bg-white">
-          <div class="flex items-center gap-1">
-            <span>1 / 1</span>
-            <select v-model="perPageRight" class="border px-1 py-0.5 rounded-sm">
-              <option v-for="n in [10, 20, 50]" :key="n" :value="n">{{ n }}/page</option>
-            </select>
-          </div>
-          <div class="space-x-2 text-base">
-            <button @click="refresh" class="hover:text-blue-600">🔄</button>
-            <button @click="add('earn')" class="hover:text-green-600">➕</button>
-            <button @click="edit('earn')" class="hover:text-gray-600">✏️</button>
-            <button @click="remove('earn')" class="hover:text-red-600">❌</button>
+        <div class="flex justify-between items-center px-4 py-3 border-t border-gray-200 bg-gray-50">
+          <div class="text-sm text-gray-600">{{ earning.length }} rule(s)</div>
+          <div class="flex space-x-2">
+            <button @click="refresh" class="text-blue-600 hover:text-blue-900 transition-colors" title="Refresh">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            </button>
+            <button @click="add('earn')" class="text-green-600 hover:text-green-900 transition-colors" title="Add Rule">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+            </button>
+            <button @click="edit('earn')" class="text-gray-600 hover:text-gray-900 transition-colors" title="Edit Rule">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+            </button>
+            <button @click="remove('earn')" class="text-red-600 hover:text-red-900 transition-colors" title="Delete Rule">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
           </div>
         </div>
       </div>

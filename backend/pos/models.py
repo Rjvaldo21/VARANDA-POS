@@ -219,14 +219,80 @@ class TransactionItem(models.Model):
 # 5. Profile
 class Profile(models.Model):
     ROLE_CHOICES = (
+        ('super_admin', 'Super Admin'),
         ('admin', 'Admin'),
+        ('manager', 'Manager'),
+        ('supervisor', 'Supervisor'),
         ('cashier', 'Cashier'),
+        ('inventory_clerk', 'Inventory Clerk'),
     )
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='cashier')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='cashier')
+    
+    # Additional profile fields
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    date_hired = models.DateField(blank=True, null=True)
+    is_active_employee = models.BooleanField(default=True)
+    
+    # Shift and location preferences
+    preferred_shift = models.CharField(max_length=20, choices=[
+        ('morning', 'Morning (6AM - 2PM)'),
+        ('afternoon', 'Afternoon (2PM - 10PM)'),
+        ('night', 'Night (10PM - 6AM)'),
+        ('flexible', 'Flexible')
+    ], default='flexible', blank=True)
+    
+    assigned_warehouse = models.ForeignKey('Warehouse', on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Security settings
+    force_password_change = models.BooleanField(default=False)
+    last_login_ip = models.GenericIPAddressField(null=True, blank=True)
+    failed_login_attempts = models.IntegerField(default=0)
+    account_locked_until = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.username} ({self.role})"
+        return f"{self.user.username} ({self.get_role_display()})"
+    
+    def get_permissions(self):
+        """Get all permissions for this user's role"""
+        from .permissions import PermissionChecker
+        return PermissionChecker.get_user_permissions(self.user)
+    
+    def has_permission(self, permission):
+        """Check if user has specific permission"""
+        from .permissions import PermissionChecker
+        return PermissionChecker.has_permission(self.user, permission)
+    
+    @property
+    def role_description(self):
+        """Get role description"""
+        from .permissions import RoleDefinition
+        roles = RoleDefinition.get_all_roles()
+        return roles.get(self.role, {}).get('description', 'No description available')
+    
+    @property
+    def is_manager_level(self):
+        """Check if user has manager level access"""
+        return self.role in ['super_admin', 'admin', 'manager']
+    
+    @property
+    def is_admin_level(self):
+        """Check if user has admin level access"""
+        return self.role in ['super_admin', 'admin']
+    
+    @property
+    def can_manage_users(self):
+        """Check if user can manage other users"""
+        return self.has_permission('users.create') or self.has_permission('users.edit')
+    
+    class Meta:
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
 
 
 @receiver(post_save, sender=User)

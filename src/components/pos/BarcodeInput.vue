@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
+import api, { baseURL } from '@/axios'
 import { useCartStore } from '@/stores/cart'
 
 const props = defineProps(['onError'])
@@ -8,7 +8,7 @@ const barcode = ref('')
 const cart = useCartStore()
 
 async function searchProduct(barcode) {
-  const res = await axios.get(`/api/products/?barcode=${barcode}`)
+  const res = await api.get(`/api/products/?barcode=${barcode}`)
   return res.data
 }
 
@@ -20,7 +20,7 @@ const fetchProduct = async () => {
   }
 
   try {
-    const response = await axios.get(`http://127.0.0.1:8000/api/products/?barcode=${trimmed}`)
+    const response = await api.get(`products/?barcode=${trimmed}`)
     const product = response.data
 
     cart.addItem({
