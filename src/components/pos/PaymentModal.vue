@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted, nextTick } from 'vue'
 import { useCartStore } from '@/stores/cart'
 import { formatCurrency } from '@/utils/format'
 
